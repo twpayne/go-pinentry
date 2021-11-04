@@ -1,4 +1,14 @@
+// Package pinentry provides a client to GnuPG's pinentry.
+//
+// See info pinentry.
+// See https://www.gnupg.org/related_software/pinentry/index.html.
+// See https://www.gnupg.org/documentation/manuals/assuan.pdf.
 package pinentry
+
+// FIXME add secure logging mode to avoid logging PIN
+// FIXME add some unit tests
+// FIXME document functions
+// FIXME add explicit ErrCancelled error (code 83886179)
 
 import (
 	"bufio"
@@ -7,6 +17,8 @@ import (
 	"io"
 	"net/url"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -23,6 +35,15 @@ const (
 	OptionLCCType                    = "lc-ctype"
 )
 
+type AssuanError struct {
+	Code        int
+	Description string
+}
+
+func (e *AssuanError) Error() string {
+	return e.Description
+}
+
 type UnexpectedResponseError struct {
 	line []byte
 }
@@ -37,7 +58,11 @@ func (e UnexpectedResponseError) Error() string {
 	return fmt.Sprintf("pinentry: unexpected response: %q", e.line)
 }
 
-type QualityFunc func(string) int
+var (
+	errorRx = regexp.MustCompile(`\AERR (\d+) (.*)\z`)
+)
+
+type QualityFunc func(string) (int, bool)
 
 type Client struct {
 	name        string
@@ -52,9 +77,9 @@ type Client struct {
 
 type ClientOption func(*Client)
 
-func WithName(name string) ClientOption {
+func WithArgs(args []string) ClientOption {
 	return func(c *Client) {
-		c.name = name
+		c.args = append(c.args, args...)
 	}
 }
 
@@ -103,6 +128,12 @@ func WithNoGlobalGrab() ClientOption {
 	}
 }
 
+func WithName(name string) ClientOption {
+	return func(c *Client) {
+		c.name = name
+	}
+}
+
 func WithNotOK(notOK string) ClientOption {
 	return WithCommandf("SETNOTOK %s\n", notOK)
 }
@@ -115,11 +146,20 @@ func WithOption(option string) ClientOption {
 	return WithCommandf("OPTION %s\n", option)
 }
 
+func WithOptions(options []string) ClientOption {
+	return func(c *Client) {
+		for _, option := range options {
+			command := fmt.Sprintf("OPTION %s\n", option)
+			c.commands = append(c.commands, command)
+		}
+	}
+}
+
 func WithPrompt(prompt string) ClientOption {
 	return WithCommandf("SETPROMPT %s\n", prompt)
 }
 
-func WithQualityBar(qualityFunc func(string) int) ClientOption {
+func WithQualityBar(qualityFunc QualityFunc) ClientOption {
 	return func(c *Client) {
 		c.commands = append(c.commands, "SETQUALITYBAR\n")
 		c.qualityFunc = qualityFunc
@@ -141,7 +181,7 @@ func WithTitle(title string) ClientOption {
 func NewClient(options ...ClientOption) (c *Client, err error) {
 	c = &Client{
 		name:        "pinentry",
-		qualityFunc: func(string) int { return 0 },
+		qualityFunc: func(string) (int, bool) { return 0, false },
 	}
 	for _, option := range options {
 		option(c)
@@ -176,13 +216,13 @@ func NewClient(options ...ClientOption) (c *Client, err error) {
 	if err != nil {
 		return
 	}
-	if !bytes.HasPrefix(line, []byte("OK")) {
+	if !isOK(line) {
 		err = newUnexpectedResponseError(line)
 		return
 	}
 
 	for _, command := range c.commands {
-		if err = c.Send(command); err != nil {
+		if err = c.command(command); err != nil {
 			return
 		}
 	}
@@ -190,8 +230,15 @@ func NewClient(options ...ClientOption) (c *Client, err error) {
 	return c, nil
 }
 
-func (c *Client) Close() error {
-	return c.stdin.Close()
+func (c *Client) Close() (err error) {
+	defer func() {
+		err = multierr.Append(err, c.stdin.Close())
+	}()
+	if err = c.writeString("BYE\n"); err != nil {
+		return
+	}
+	err = c.readOK()
+	return
 }
 
 func (c *Client) Confirm(option string) (bool, error) {
@@ -200,13 +247,13 @@ func (c *Client) Confirm(option string) (bool, error) {
 		command += " " + option
 	}
 	command += "\n"
-	if err := c.write([]byte(command)); err != nil {
+	if err := c.writeString(command); err != nil {
 		return false, err
 	}
 	switch line, err := c.readLine(); {
 	case err != nil:
 		return false, err
-	case bytes.Equal(line, []byte("OK")):
+	case isOK(line):
 		return true, nil
 	case bytes.Equal(line, []byte("ASSUAN_Not_Confirmed")):
 		return false, nil
@@ -216,7 +263,7 @@ func (c *Client) Confirm(option string) (bool, error) {
 }
 
 func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
-	if err = c.write([]byte("GETPIN\n")); err != nil {
+	if err = c.writeString("GETPIN\n"); err != nil {
 		return "", false, err
 	}
 	for {
@@ -224,13 +271,13 @@ func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
 		switch line, err = c.readLine(); {
 		case err != nil:
 			return
-		case bytes.HasPrefix(line, []byte("D ")):
+		case isOK(line):
+			return
+		case isData(line):
 			pin, err = getPIN(line[2:])
 			if err != nil {
 				return
 			}
-		case bytes.Equal(line, []byte("OK")):
-			return
 		case bytes.Equal(line, []byte("S PASSWORD_FROM_CACHE")):
 			fromCache = true
 		case bytes.HasPrefix(line, []byte("INQUIRE QUALITY ")):
@@ -238,15 +285,22 @@ func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
 			if err != nil {
 				return
 			}
-			quality := c.qualityFunc(pin)
-			if quality < -100 {
-				quality = -100
-			} else if quality > 100 {
-				quality = 1000
-			}
-			// FIXME the format of the response here is not recognized by pinentry-mac
-			if err = c.write([]byte(fmt.Sprintf("D %d\n", quality))); err != nil {
-				return
+			if quality, ok := c.qualityFunc(pin); ok {
+				if quality < -100 {
+					quality = -100
+				} else if quality > 100 {
+					quality = 100
+				}
+				if err = c.writeString(fmt.Sprintf("D %d\n", quality)); err != nil {
+					return
+				}
+				if err = c.writeString("END\n"); err != nil {
+					return
+				}
+			} else {
+				if err = c.writeString("CAN\n"); err != nil {
+					return
+				}
 			}
 		default:
 			err = newUnexpectedResponseError(line)
@@ -255,43 +309,84 @@ func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
 	}
 }
 
-func (c *Client) Send(command string) error {
-	if err := c.write([]byte(command)); err != nil {
+func (c *Client) command(command string) error {
+	if err := c.writeString(command); err != nil {
 		return err
 	}
 	return c.readOK()
 }
 
 func (c *Client) readLine() ([]byte, error) {
-	line, _, err := c.stdout.ReadLine()
-	if err == nil && bytes.HasPrefix(line, []byte("ERR ")) {
-		err = fmt.Errorf("pinentry: %s", line[4:])
+	for {
+		line, _, err := c.stdout.ReadLine()
+		if err == nil && bytes.HasPrefix(line, []byte("ERR ")) {
+			err = fmt.Errorf("pinentry: %s", line[4:])
+		}
+		if c.logger != nil {
+			c.logger.Err(err).Bytes("line", line).Msg("readLine")
+		}
+		switch {
+		case isBlank(line):
+		case isComment(line):
+		default:
+			return line, err
+		}
 	}
-	if c.logger != nil {
-		c.logger.Err(err).Bytes("line", line).Msg("readLine")
-	}
-	return line, err
 }
 
 func (c *Client) readOK() error {
 	switch line, err := c.readLine(); {
 	case err != nil:
 		return err
-	case bytes.Equal(line, []byte("OK")):
+	case isOK(line):
 		return nil
+	case isError(line):
+		return getError(line)
 	default:
 		return newUnexpectedResponseError(line)
 	}
 }
 
-func (c *Client) write(line []byte) error {
-	_, err := c.stdin.Write(line)
+func (c *Client) writeString(line string) error {
+	_, err := c.stdin.Write([]byte(line))
 	if c.logger != nil {
-		c.logger.Err(err).Bytes("line", line).Msg("write")
+		c.logger.Err(err).Str("line", line).Msg("write")
 	}
 	return err
 }
 
+func getError(line []byte) error {
+	match := errorRx.FindSubmatch(line)
+	if match == nil {
+		return newUnexpectedResponseError(line)
+	}
+	code, _ := strconv.Atoi(string(match[1]))
+	return &AssuanError{
+		Code:        code,
+		Description: string(match[2]),
+	}
+}
+
 func getPIN(suffix []byte) (password string, err error) {
 	return url.QueryUnescape(string(suffix))
+}
+
+func isBlank(line []byte) bool {
+	return len(bytes.TrimSpace(line)) == 0
+}
+
+func isComment(line []byte) bool {
+	return bytes.HasPrefix(line, []byte("#"))
+}
+
+func isData(line []byte) bool {
+	return bytes.HasPrefix(line, []byte("D "))
+}
+
+func isError(line []byte) bool {
+	return bytes.HasPrefix(line, []byte("ERR "))
+}
+
+func isOK(line []byte) bool {
+	return bytes.HasPrefix(line, []byte("OK"))
 }

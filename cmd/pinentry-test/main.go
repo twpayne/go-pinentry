@@ -14,8 +14,12 @@ func run(logger *zerolog.Logger) error {
 		pinentry.WithName("pinentry-mac"),
 		pinentry.WithDesc("desc"),
 		pinentry.WithOK("OK"),
-		pinentry.WithQualityBar(func(s string) int {
-			return 10*len(s) - 100
+		pinentry.WithQualityBar(func(s string) (int, bool) {
+			quality := 5 * len(s)
+			if len(s) < 5 {
+				quality = -quality
+			}
+			return quality, true
 		}),
 		pinentry.WithLogger(logger),
 	)
