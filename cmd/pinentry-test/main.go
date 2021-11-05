@@ -11,7 +11,7 @@ import (
 
 func run(logger *zerolog.Logger) error {
 	client, err := pinentry.NewClient(
-		pinentry.WithName("pinentry-mac"),
+		pinentry.WithBinaryName("pinentry-mac"),
 		pinentry.WithDesc("desc"),
 		pinentry.WithOK("OK"),
 		pinentry.WithQualityBar(func(s string) (int, bool) {
