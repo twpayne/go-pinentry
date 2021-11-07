@@ -7,7 +7,6 @@ package pinentry
 
 // FIXME add secure logging mode to avoid logging PIN
 // FIXME add some unit tests
-// FIXME add explicit ErrCancelled error (code 83886179)
 
 import (
 	"bufio"
