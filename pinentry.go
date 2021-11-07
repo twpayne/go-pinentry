@@ -12,12 +12,14 @@ package pinentry
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -33,6 +35,11 @@ const (
 	OptionTTYName                    = "ttyname"
 	OptionTTYType                    = "ttytype"
 	OptionLCCType                    = "lc-ctype"
+)
+
+// Error codes.
+const (
+	AssuanErrorCodeCancelled = 83886179
 )
 
 // An AssuanError is returned when an error is sent over the Assuan protocol.
@@ -101,7 +108,7 @@ func WithBinaryName(binaryName string) ClientOption {
 
 // WithCancel sets the cancel button text.
 func WithCancel(cancel string) ClientOption {
-	return WithCommandf("SETCANCEL %s\n", cancel)
+	return WithCommandf("SETCANCEL %s", escape(cancel))
 }
 
 // WithCommand appends an Assuan command that is sent when the connection is
@@ -128,17 +135,17 @@ func WithDebug() ClientOption {
 
 // WithDesc sets the description text.
 func WithDesc(desc string) ClientOption {
-	return WithCommandf("SETDESC %s\n", desc)
+	return WithCommandf("SETDESC %s", escape(desc))
 }
 
 // WithError sets the error text.
 func WithError(error string) ClientOption {
-	return WithCommandf("SETERROR %s\n", error)
+	return WithCommandf("SETERROR %s", escape(error))
 }
 
 // WithKeyInfo sets a stable key identifier for use with password caching.
 func WithKeyInfo(keyInfo string) ClientOption {
-	return WithCommandf("SETKEYINFO %s\n", keyInfo)
+	return WithCommandf("SETKEYINFO %s", escape(keyInfo))
 }
 
 // WithLogger sets the logger.
@@ -158,24 +165,24 @@ func WithNoGlobalGrab() ClientOption {
 
 // WithNotOK sets the text of the non-affirmative response button.
 func WithNotOK(notOK string) ClientOption {
-	return WithCommandf("SETNOTOK %s\n", notOK)
+	return WithCommandf("SETNOTOK %s", escape(notOK))
 }
 
 // WithOK sets the text of the OK button.
 func WithOK(ok string) ClientOption {
-	return WithCommandf("SETOK %s\n", ok)
+	return WithCommandf("SETOK %s", escape(ok))
 }
 
 // WithOption sets an option.
 func WithOption(option string) ClientOption {
-	return WithCommandf("OPTION %s\n", option)
+	return WithCommandf("OPTION %s", escape(option))
 }
 
 // WithOptions sets multiple options.
 func WithOptions(options []string) ClientOption {
 	return func(c *Client) {
 		for _, option := range options {
-			command := fmt.Sprintf("OPTION %s\n", option)
+			command := fmt.Sprintf("OPTION %s", escape(option))
 			c.commands = append(c.commands, command)
 		}
 	}
@@ -183,30 +190,30 @@ func WithOptions(options []string) ClientOption {
 
 // WithPrompt sets the prompt.
 func WithPrompt(prompt string) ClientOption {
-	return WithCommandf("SETPROMPT %s\n", prompt)
+	return WithCommandf("SETPROMPT %s", escape(prompt))
 }
 
 // WithQualityBar enables the quality bar.
 func WithQualityBar(qualityFunc QualityFunc) ClientOption {
 	return func(c *Client) {
-		c.commands = append(c.commands, "SETQUALITYBAR\n")
+		c.commands = append(c.commands, "SETQUALITYBAR")
 		c.qualityFunc = qualityFunc
 	}
 }
 
 // WithQualityBarToolTip sets the quality bar tool tip.
 func WithQualityBarToolTip(qualityBarTT string) ClientOption {
-	return WithCommandf("SETQUALITYBAR_TT %s\n", qualityBarTT)
+	return WithCommandf("SETQUALITYBAR_TT %s", escape(qualityBarTT))
 }
 
 // WithTimeout sets the timeout.
 func WithTimeout(timeout time.Duration) ClientOption {
-	return WithCommandf("SETTIMEOUT %d\n", timeout/time.Second)
+	return WithCommandf("SETTIMEOUT %d", timeout/time.Second)
 }
 
 // WithTitle sets the title.
 func WithTitle(title string) ClientOption {
-	return WithCommandf("SETTITLE %s\n", title)
+	return WithCommandf("SETTITLE %s", escape(title))
 }
 
 // NewClient returns a new Client with the given options.
@@ -216,7 +223,9 @@ func NewClient(options ...ClientOption) (c *Client, err error) {
 		qualityFunc: func(string) (int, bool) { return 0, false },
 	}
 	for _, option := range options {
-		option(c)
+		if option != nil {
+			option(c)
+		}
 	}
 
 	c.cmd = exec.Command(c.binaryName, c.args...)
@@ -267,7 +276,7 @@ func (c *Client) Close() (err error) {
 	defer func() {
 		err = multierr.Append(err, c.stdin.Close())
 	}()
-	if err = c.writeString("BYE\n"); err != nil {
+	if err = c.writeLine("BYE"); err != nil {
 		return
 	}
 	err = c.readOK()
@@ -280,8 +289,7 @@ func (c *Client) Confirm(option string) (bool, error) {
 	if option != "" {
 		command += " " + option
 	}
-	command += "\n"
-	if err := c.writeString(command); err != nil {
+	if err := c.writeLine(command); err != nil {
 		return false, err
 	}
 	switch line, err := c.readLine(); {
@@ -296,9 +304,10 @@ func (c *Client) Confirm(option string) (bool, error) {
 	}
 }
 
-// GetPIN gets a PIN from the user.
+// GetPIN gets a PIN from the user. If the user cancels, an error is returned
+// which can be tested with IsCancelled.
 func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
-	if err = c.writeString("GETPIN\n"); err != nil {
+	if err = c.writeLine("GETPIN"); err != nil {
 		return "", false, err
 	}
 	for {
@@ -326,14 +335,14 @@ func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
 				} else if quality > 100 {
 					quality = 100
 				}
-				if err = c.writeString(fmt.Sprintf("D %d\n", quality)); err != nil {
+				if err = c.writeLine(fmt.Sprintf("D %d", quality)); err != nil {
 					return
 				}
-				if err = c.writeString("END\n"); err != nil {
+				if err = c.writeLine("END"); err != nil {
 					return
 				}
 			} else {
-				if err = c.writeString("CAN\n"); err != nil {
+				if err = c.writeLine("CAN"); err != nil {
 					return
 				}
 			}
@@ -346,7 +355,7 @@ func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
 
 // command writes a command and reads an OK response.
 func (c *Client) command(command string) error {
-	if err := c.writeString(command); err != nil {
+	if err := c.writeLine(command); err != nil {
 		return err
 	}
 	return c.readOK()
@@ -356,8 +365,8 @@ func (c *Client) command(command string) error {
 func (c *Client) readLine() ([]byte, error) {
 	for {
 		line, _, err := c.stdout.ReadLine()
-		if err == nil && bytes.HasPrefix(line, []byte("ERR ")) {
-			err = fmt.Errorf("pinentry: %s", line[4:])
+		if err != nil {
+			return nil, err
 		}
 		if c.logger != nil {
 			c.logger.Err(err).Bytes("line", line).Msg("readLine")
@@ -365,6 +374,8 @@ func (c *Client) readLine() ([]byte, error) {
 		switch {
 		case isBlank(line):
 		case isComment(line):
+		case isError(line):
+			return nil, newError(line)
 		default:
 			return line, err
 		}
@@ -378,20 +389,33 @@ func (c *Client) readOK() error {
 		return err
 	case isOK(line):
 		return nil
-	case isError(line):
-		return newError(line)
 	default:
 		return newUnexpectedResponseError(line)
 	}
 }
 
-// writeString writes a single line.
-func (c *Client) writeString(line string) error {
-	_, err := c.stdin.Write([]byte(line))
+// writeLine writes a single line.
+func (c *Client) writeLine(line string) error {
+	_, err := c.stdin.Write([]byte(line + "\n"))
 	if c.logger != nil {
 		c.logger.Err(err).Str("line", line).Msg("write")
 	}
 	return err
+}
+
+// IsCancelled returns if the error is operation cancelled.
+func IsCancelled(err error) bool {
+	var assuanError *AssuanError
+	if !errors.As(err, &assuanError) {
+		return false
+	}
+	return assuanError.Code == AssuanErrorCodeCancelled
+}
+
+func escape(s string) string {
+	s = strings.ReplaceAll(s, "%", "%25")
+	s = strings.ReplaceAll(s, "\n", "%0A")
+	return s
 }
 
 // getPIN parses a PIN from suffix.
@@ -419,6 +443,7 @@ func isError(line []byte) bool {
 	return bytes.HasPrefix(line, []byte("ERR "))
 }
 
+// isOK returns if the line is an OK response.
 func isOK(line []byte) bool {
 	return bytes.HasPrefix(line, []byte("OK"))
 }

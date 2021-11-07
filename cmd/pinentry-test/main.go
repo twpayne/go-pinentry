@@ -12,8 +12,9 @@ import (
 func run(logger *zerolog.Logger) error {
 	client, err := pinentry.NewClient(
 		pinentry.WithBinaryNameFromGnuPGAgentConf(),
-		pinentry.WithDesc("desc"),
-		pinentry.WithOK("OK"),
+		pinentry.WithDesc("My multiline\ndescription"),
+		pinentry.WithGPGTTY(),
+		pinentry.WithPrompt("My prompt:"),
 		pinentry.WithQualityBar(func(s string) (int, bool) {
 			quality := 5 * len(s)
 			if len(s) < 5 {
@@ -21,6 +22,7 @@ func run(logger *zerolog.Logger) error {
 			}
 			return quality, true
 		}),
+		pinentry.WithTitle("My title"),
 		pinentry.WithLogger(logger),
 	)
 	if err != nil {
@@ -32,15 +34,16 @@ func run(logger *zerolog.Logger) error {
 		}
 	}()
 
-	pin, fromCache, err := client.GetPIN()
-	if err != nil {
+	switch pin, fromCache, err := client.GetPIN(); {
+	case pinentry.IsCancelled(err):
+		fmt.Println("Cancelled")
 		return err
-	}
-
-	if fromCache {
-		fmt.Printf("%s (from cache)\n", pin)
-	} else {
-		fmt.Printf("%s\n", pin)
+	case err != nil:
+		return err
+	case fromCache:
+		fmt.Printf("PIN: %s (from cache)\n", pin)
+	default:
+		fmt.Printf("PIN: %s\n", pin)
 	}
 
 	return nil

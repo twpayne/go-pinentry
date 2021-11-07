@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 )
 
 var gnuPGAgentConfPINEntryProgramRx = regexp.MustCompile(`(?m)^\s*pinentry-program\s+(\S+)`)
@@ -31,4 +32,16 @@ func WithBinaryNameFromGnuPGAgentConf() (clientOption ClientOption) {
 	return func(c *Client) {
 		c.binaryName = string(match[1])
 	}
+}
+
+// WithGPGTTY sets the tty.
+func WithGPGTTY() ClientOption {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	gpgTTY, ok := os.LookupEnv("GPG_TTY")
+	if !ok {
+		return nil
+	}
+	return WithCommandf("OPTION %s=%s", OptionTTYName, gpgTTY)
 }
