@@ -5,6 +5,37 @@
 Package `pinentry` provides a client to [GnuPG's
 pinentry](https://www.gnupg.org/related_software/pinentry/index.html).
 
+## Key Features
+
+* Support for all `pinentry` features.
+* Idiomatic Go API.
+
+## Example
+
+```go
+	client, err := pinentry.NewClient(
+		pinentry.WithDesc("My description"),
+		pinentry.WithGPGTTY(),
+		pinentry.WithPrompt("My prompt:"),
+        pinentry.WithTitle("My title")
+	)
+	if err != nil {
+		return err
+	}
+    defer client.Close()
+
+	switch pin, fromCache, err := client.GetPIN(); {
+	case pinentry.IsCancelled(err):
+		fmt.Println("Cancelled")
+	case err != nil:
+		return err
+	case fromCache:
+		fmt.Printf("PIN: %s (from cache)\n", pin)
+	default:
+		fmt.Printf("PIN: %s\n", pin)
+	}
+```
+
 ## License
 
 MIT
