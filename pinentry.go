@@ -80,7 +80,6 @@ type Client struct {
 	binaryName  string
 	args        []string
 	commands    []string
-	cmd         *exec.Cmd
 	stdin       io.WriteCloser
 	stdout      *bufio.Reader
 	qualityFunc QualityFunc
@@ -227,21 +226,21 @@ func NewClient(options ...ClientOption) (c *Client, err error) {
 		}
 	}
 
-	c.cmd = exec.Command(c.binaryName, c.args...)
+	cmd := exec.Command(c.binaryName, c.args...)
 
-	c.stdin, err = c.cmd.StdinPipe()
+	c.stdin, err = cmd.StdinPipe()
 	if err != nil {
 		return
 	}
 
 	var stdout io.ReadCloser
-	stdout, err = c.cmd.StdoutPipe()
+	stdout, err = cmd.StdoutPipe()
 	if err != nil {
 		return
 	}
 	c.stdout = bufio.NewReader(stdout)
 
-	err = c.cmd.Start()
+	err = cmd.Start()
 	defer func() {
 		if err != nil {
 			err = multierr.Append(err, c.Close())
