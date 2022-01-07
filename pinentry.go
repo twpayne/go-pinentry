@@ -52,7 +52,7 @@ func (e *AssuanError) Error() string {
 }
 
 // An UnexpectedResponseError is returned when an unexpected response is
-// recieved.
+// received.
 type UnexpectedResponseError struct {
 	line []byte
 }
