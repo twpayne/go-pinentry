@@ -6,16 +6,12 @@
 package pinentry
 
 // FIXME add secure logging mode to avoid logging PIN
-// FIXME add some unit tests
 
 import (
-	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -54,12 +50,12 @@ func (e *AssuanError) Error() string {
 // An UnexpectedResponseError is returned when an unexpected response is
 // received.
 type UnexpectedResponseError struct {
-	line []byte
+	line string
 }
 
 func newUnexpectedResponseError(line []byte) UnexpectedResponseError {
 	return UnexpectedResponseError{
-		line: line,
+		line: string(line),
 	}
 }
 
@@ -80,9 +76,7 @@ type Client struct {
 	binaryName  string
 	args        []string
 	commands    []string
-	cmd         *exec.Cmd
-	stdin       io.WriteCloser
-	stdout      *bufio.Reader
+	process     Process
 	qualityFunc QualityFunc
 	logger      *zerolog.Logger
 }
@@ -138,8 +132,8 @@ func WithDesc(desc string) ClientOption {
 }
 
 // WithError sets the error text.
-func WithError(error string) ClientOption {
-	return WithCommandf("SETERROR %s", escape(error))
+func WithError(err string) ClientOption {
+	return WithCommandf("SETERROR %s", escape(err))
 }
 
 // WithKeyInfo sets a stable key identifier for use with password caching.
@@ -187,6 +181,13 @@ func WithOptions(options []string) ClientOption {
 	}
 }
 
+// WithProcess sets the process.
+func WithProcess(process Process) ClientOption {
+	return func(c *Client) {
+		c.process = process
+	}
+}
+
 // WithPrompt sets the prompt.
 func WithPrompt(prompt string) ClientOption {
 	return WithCommandf("SETPROMPT %s", escape(prompt))
@@ -219,37 +220,26 @@ func WithTitle(title string) ClientOption {
 func NewClient(options ...ClientOption) (c *Client, err error) {
 	c = &Client{
 		binaryName:  "pinentry",
+		process:     &execProcess{},
 		qualityFunc: func(string) (int, bool) { return 0, false },
 	}
+
 	for _, option := range options {
 		if option != nil {
 			option(c)
 		}
 	}
 
-	c.cmd = exec.Command(c.binaryName, c.args...)
-
-	c.stdin, err = c.cmd.StdinPipe()
+	err = c.process.Start(c.binaryName, c.args)
 	if err != nil {
 		return
 	}
 
-	var stdout io.ReadCloser
-	stdout, err = c.cmd.StdoutPipe()
-	if err != nil {
-		return
-	}
-	c.stdout = bufio.NewReader(stdout)
-
-	err = c.cmd.Start()
 	defer func() {
 		if err != nil {
 			err = multierr.Append(err, c.Close())
 		}
 	}()
-	if err != nil {
-		return
-	}
 
 	var line []byte
 	line, err = c.readLine()
@@ -273,7 +263,7 @@ func NewClient(options ...ClientOption) (c *Client, err error) {
 // Close closes the connection to the pinentry process.
 func (c *Client) Close() (err error) {
 	defer func() {
-		err = multierr.Append(err, c.stdin.Close())
+		err = multierr.Append(err, c.process.Close())
 	}()
 	if err = c.writeLine("BYE"); err != nil {
 		return
@@ -363,7 +353,7 @@ func (c *Client) command(command string) error {
 // readLine reads a line, ignoring blank lines and comments.
 func (c *Client) readLine() ([]byte, error) {
 	for {
-		line, _, err := c.stdout.ReadLine()
+		line, _, err := c.process.ReadLine()
 		if err != nil {
 			return nil, err
 		}
@@ -395,7 +385,7 @@ func (c *Client) readOK() error {
 
 // writeLine writes a single line.
 func (c *Client) writeLine(line string) error {
-	_, err := c.stdin.Write([]byte(line + "\n"))
+	_, err := c.process.Write([]byte(line + "\n"))
 	if c.logger != nil {
 		c.logger.Err(err).Str("line", line).Msg("write")
 	}

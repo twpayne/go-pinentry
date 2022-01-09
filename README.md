@@ -9,11 +9,13 @@ pinentry](https://www.gnupg.org/related_software/pinentry/index.html).
 
 * Support for all `pinentry` features.
 * Idiomatic Go API.
+* Well tested.
 
 ## Example
 
 ```go
 	client, err := pinentry.NewClient(
+		pinentry.WithBinaryNameFromGnuPGAgentConf(),
 		pinentry.WithDesc("My description"),
 		pinentry.WithGPGTTY(),
 		pinentry.WithPrompt("My prompt:"),
@@ -35,6 +37,16 @@ pinentry](https://www.gnupg.org/related_software/pinentry/index.html).
 		fmt.Printf("PIN: %s\n", pin)
 	}
 ```
+
+## Comparison with related packages
+
+Compared to
+[`github.com/gopasspw/pinentry`](https://github.com/gopasspw/pinentry), this
+package:
+* Implements all `pinentry` features.
+* Includes tests.
+* Implements a full parser of the underlying Assuan protocol for better
+  compatibility with all `pinentry` implementations.
 
 ## License
 
