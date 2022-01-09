@@ -417,6 +417,7 @@ func TestClientReadLineIgnoreComment(t *testing.T) {
 }
 
 func newMockProcess(t *testing.T) *MockProcess {
+	t.Helper()
 	return NewMockProcess(gomock.NewController(t))
 }
 

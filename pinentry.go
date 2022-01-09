@@ -132,8 +132,8 @@ func WithDesc(desc string) ClientOption {
 }
 
 // WithError sets the error text.
-func WithError(error string) ClientOption {
-	return WithCommandf("SETERROR %s", escape(error))
+func WithError(err string) ClientOption {
+	return WithCommandf("SETERROR %s", escape(err))
 }
 
 // WithKeyInfo sets a stable key identifier for use with password caching.
