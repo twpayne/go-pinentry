@@ -8,8 +8,8 @@ import (
 	"go.uber.org/multierr"
 )
 
-// A process abstracts the interface to a pinentry process.
-type process interface {
+// A Process abstracts the interface to a pinentry Process.
+type Process interface {
 	io.WriteCloser
 	ReadLine() ([]byte, bool, error)
 	Start(string, []string) error

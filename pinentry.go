@@ -6,7 +6,6 @@
 package pinentry
 
 // FIXME add secure logging mode to avoid logging PIN
-// FIXME add some unit tests
 
 import (
 	"bytes"
@@ -51,12 +50,12 @@ func (e *AssuanError) Error() string {
 // An UnexpectedResponseError is returned when an unexpected response is
 // received.
 type UnexpectedResponseError struct {
-	line []byte
+	line string
 }
 
 func newUnexpectedResponseError(line []byte) UnexpectedResponseError {
 	return UnexpectedResponseError{
-		line: line,
+		line: string(line),
 	}
 }
 
@@ -77,7 +76,7 @@ type Client struct {
 	binaryName  string
 	args        []string
 	commands    []string
-	process     process
+	process     Process
 	qualityFunc QualityFunc
 	logger      *zerolog.Logger
 }
@@ -179,6 +178,13 @@ func WithOptions(options []string) ClientOption {
 			command := fmt.Sprintf("OPTION %s", escape(option))
 			c.commands = append(c.commands, command)
 		}
+	}
+}
+
+// WithProcess sets the process.
+func WithProcess(process Process) ClientOption {
+	return func(c *Client) {
+		c.process = process
 	}
 }
 
