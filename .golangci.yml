@@ -54,6 +54,7 @@ linters:
   - stylecheck
   - tagliatelle
   - tenv
+  - testpackage
   - thelper
   - typecheck
   - unconvert
@@ -75,7 +76,6 @@ linters:
   - nestif
   - nlreturn
   - paralleltest
-  - testpackage
   - tparallel
   - varnamelen
   - wrapcheck

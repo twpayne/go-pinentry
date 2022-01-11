@@ -1,6 +1,6 @@
-//go:generate mockgen -destination=mockprocess.go -package=pinentry . Process
+//go:generate mockgen -destination=mockprocess_test.go -package=pinentry_test . Process
 
-package pinentry
+package pinentry_test
 
 import (
 	"strconv"
@@ -10,14 +10,16 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/twpayne/go-pinentry"
 )
 
 func TestClientClose(t *testing.T) {
 	p := newMockProcess(t)
 
 	p.expectStart("pinentry", nil)
-	c, err := NewClient(
-		WithProcess(p),
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
 	)
 	require.NoError(t, err)
 
@@ -27,12 +29,12 @@ func TestClientClose(t *testing.T) {
 
 func TestClientArgs(t *testing.T) {
 	for i, tc := range []struct {
-		clientOptions []ClientOption
+		clientOptions []pinentry.ClientOption
 		expectedArgs  []string
 	}{
 		{
-			clientOptions: []ClientOption{
-				WithArgs([]string{
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithArgs([]string{
 					"--arg1",
 					"--arg2",
 				}),
@@ -43,16 +45,16 @@ func TestClientArgs(t *testing.T) {
 			},
 		},
 		{
-			clientOptions: []ClientOption{
-				WithDebug(),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithDebug(),
 			},
 			expectedArgs: []string{
 				"--debug",
 			},
 		},
 		{
-			clientOptions: []ClientOption{
-				WithNoGlobalGrab(),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithNoGlobalGrab(),
 			},
 			expectedArgs: []string{
 				"--no-global-grab",
@@ -63,9 +65,9 @@ func TestClientArgs(t *testing.T) {
 			p := newMockProcess(t)
 
 			p.expectStart("pinentry", tc.expectedArgs)
-			clientOptions := []ClientOption{WithProcess(p)}
+			clientOptions := []pinentry.ClientOption{pinentry.WithProcess(p)}
 			clientOptions = append(clientOptions, tc.clientOptions...)
-			c, err := NewClient(clientOptions...)
+			c, err := pinentry.NewClient(clientOptions...)
 			require.NoError(t, err)
 
 			p.expectClose()
@@ -78,9 +80,9 @@ func TestClientBinaryName(t *testing.T) {
 	p := newMockProcess(t)
 
 	p.expectStart("pinentry-test", nil)
-	c, err := NewClient(
-		WithBinaryName("pinentry-test"),
-		WithProcess(p),
+	c, err := pinentry.NewClient(
+		pinentry.WithBinaryName("pinentry-test"),
+		pinentry.WithProcess(p),
 	)
 	require.NoError(t, err)
 
@@ -90,80 +92,80 @@ func TestClientBinaryName(t *testing.T) {
 
 func TestClientCommands(t *testing.T) {
 	for i, tc := range []struct {
-		clientOptions   []ClientOption
+		clientOptions   []pinentry.ClientOption
 		expectedCommand string
 	}{
 		{
-			clientOptions: []ClientOption{
-				WithCancel("cancel"),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithCancel("cancel"),
 			},
 			expectedCommand: "SETCANCEL cancel",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithDesc("desc"),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithDesc("desc"),
 			},
 			expectedCommand: "SETDESC desc",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithError("error"),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithError("error"),
 			},
 			expectedCommand: "SETERROR error",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithKeyInfo("keyinfo"),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithKeyInfo("keyinfo"),
 			},
 			expectedCommand: "SETKEYINFO keyinfo",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithNotOK("notok"),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithNotOK("notok"),
 			},
 			expectedCommand: "SETNOTOK notok",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithOK("ok"),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithOK("ok"),
 			},
 			expectedCommand: "SETOK ok",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithOption("option"),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithOption("option"),
 			},
 			expectedCommand: "OPTION option",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithOptions([]string{
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithOptions([]string{
 					"option",
 				}),
 			},
 			expectedCommand: "OPTION option",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithPrompt("prompt"),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithPrompt("prompt"),
 			},
 			expectedCommand: "SETPROMPT prompt",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithQualityBarToolTip("qualitybartooltip"),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithQualityBarToolTip("qualitybartooltip"),
 			},
 			expectedCommand: "SETQUALITYBAR_TT qualitybartooltip",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithTimeout(time.Second),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithTimeout(time.Second),
 			},
 			expectedCommand: "SETTIMEOUT 1",
 		},
 		{
-			clientOptions: []ClientOption{
-				WithTitle("title"),
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithTitle("title"),
 			},
 			expectedCommand: "SETTITLE title",
 		},
@@ -173,9 +175,9 @@ func TestClientCommands(t *testing.T) {
 
 			p.expectStart("pinentry", nil)
 			p.expectWritelnOK(tc.expectedCommand)
-			clientOptions := []ClientOption{WithProcess(p)}
+			clientOptions := []pinentry.ClientOption{pinentry.WithProcess(p)}
 			clientOptions = append(clientOptions, tc.clientOptions...)
-			c, err := NewClient(clientOptions...)
+			c, err := pinentry.NewClient(clientOptions...)
 			require.NoError(t, err)
 
 			p.expectClose()
@@ -188,8 +190,8 @@ func TestClientGetPIN(t *testing.T) {
 	p := newMockProcess(t)
 
 	p.expectStart("pinentry", nil)
-	c, err := NewClient(
-		WithProcess(p),
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
 	)
 	require.NoError(t, err)
 
@@ -211,8 +213,8 @@ func TestClientConfirm(t *testing.T) {
 	p := newMockProcess(t)
 
 	p.expectStart("pinentry", nil)
-	c, err := NewClient(
-		WithProcess(p),
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
 	)
 	require.NoError(t, err)
 
@@ -231,8 +233,8 @@ func TestClientConfirmCancel(t *testing.T) {
 	p := newMockProcess(t)
 
 	p.expectStart("pinentry", nil)
-	c, err := NewClient(
-		WithProcess(p),
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
 	)
 	require.NoError(t, err)
 
@@ -240,7 +242,7 @@ func TestClientConfirmCancel(t *testing.T) {
 	p.expectReadLine("ERR 83886179 Operation cancelled <Pinentry>")
 	actualConfirm, err := c.Confirm("confirm")
 	require.Error(t, err)
-	assert.True(t, IsCancelled(err))
+	assert.True(t, pinentry.IsCancelled(err))
 	assert.Equal(t, false, actualConfirm)
 
 	p.expectClose()
@@ -251,8 +253,8 @@ func TestClientGetPINCancel(t *testing.T) {
 	p := newMockProcess(t)
 
 	p.expectStart("pinentry", nil)
-	c, err := NewClient(
-		WithProcess(p),
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
 	)
 	require.NoError(t, err)
 
@@ -260,7 +262,7 @@ func TestClientGetPINCancel(t *testing.T) {
 	p.expectReadLine("ERR 83886179 Operation cancelled <Pinentry>")
 	actualPIN, actualFromCache, err := c.GetPIN()
 	require.Error(t, err)
-	assert.True(t, IsCancelled(err))
+	assert.True(t, pinentry.IsCancelled(err))
 	assert.Equal(t, "", actualPIN)
 	assert.Equal(t, false, actualFromCache)
 
@@ -272,8 +274,8 @@ func TestClientGetPINFromCache(t *testing.T) {
 	p := newMockProcess(t)
 
 	p.expectStart("pinentry", nil)
-	c, err := NewClient(
-		WithProcess(p),
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
 	)
 	require.NoError(t, err)
 
@@ -297,9 +299,9 @@ func TestClientGetPINQualityBar(t *testing.T) {
 
 	p.expectStart("pinentry", nil)
 	p.expectWritelnOK("SETQUALITYBAR")
-	c, err := NewClient(
-		WithProcess(p),
-		WithQualityBar(func(pin string) (int, bool) {
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
+		pinentry.WithQualityBar(func(pin string) (int, bool) {
 			return 10 * len(pin), true
 		}),
 	)
@@ -333,9 +335,9 @@ func TestClientGetPINQualityBarCancel(t *testing.T) {
 
 	p.expectStart("pinentry", nil)
 	p.expectWritelnOK("SETQUALITYBAR")
-	c, err := NewClient(
-		WithProcess(p),
-		WithQualityBar(func(pin string) (int, bool) {
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
+		pinentry.WithQualityBar(func(pin string) (int, bool) {
 			return 0, false
 		}),
 	)
@@ -365,8 +367,8 @@ func TestClientGetPINineUnexpectedResponse(t *testing.T) {
 	p := newMockProcess(t)
 
 	p.expectStart("pinentry", nil)
-	c, err := NewClient(
-		WithProcess(p),
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
 	)
 	require.NoError(t, err)
 
@@ -374,8 +376,8 @@ func TestClientGetPINineUnexpectedResponse(t *testing.T) {
 	p.expectReadLine("unexpected response")
 	actualPIN, actualFromCache, err := c.GetPIN()
 	require.Error(t, err)
-	assert.ErrorIs(t, err, UnexpectedResponseError{
-		line: "unexpected response",
+	assert.ErrorIs(t, err, pinentry.UnexpectedResponseError{
+		Line: "unexpected response",
 	})
 	assert.Equal(t, "", actualPIN)
 	assert.Equal(t, false, actualFromCache)
@@ -392,8 +394,8 @@ func TestClientReadLineIgnoreBlank(t *testing.T) {
 	p.expectReadLine("\t")
 	p.expectReadLine("\n")
 	p.expectReadLine(" ")
-	c, err := NewClient(
-		WithProcess(p),
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
 	)
 	require.NoError(t, err)
 
@@ -407,8 +409,8 @@ func TestClientReadLineIgnoreComment(t *testing.T) {
 	p.expectStart("pinentry", nil)
 	p.expectReadLine("#")
 	p.expectReadLine("# comment")
-	c, err := NewClient(
-		WithProcess(p),
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
 	)
 	require.NoError(t, err)
 

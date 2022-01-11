@@ -50,17 +50,17 @@ func (e *AssuanError) Error() string {
 // An UnexpectedResponseError is returned when an unexpected response is
 // received.
 type UnexpectedResponseError struct {
-	line string
+	Line string
 }
 
 func newUnexpectedResponseError(line []byte) UnexpectedResponseError {
 	return UnexpectedResponseError{
-		line: string(line),
+		Line: string(line),
 	}
 }
 
 func (e UnexpectedResponseError) Error() string {
-	return fmt.Sprintf("pinentry: unexpected response: %q", e.line)
+	return fmt.Sprintf("pinentry: unexpected response: %q", e.Line)
 }
 
 var errorRx = regexp.MustCompile(`\AERR (\d+) (.*)\z`)
