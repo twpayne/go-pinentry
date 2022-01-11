@@ -11,10 +11,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -307,17 +305,11 @@ func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
 		case isOK(line):
 			return
 		case isData(line):
-			pin, err = getPIN(line[2:])
-			if err != nil {
-				return
-			}
+			pin = getPIN(line[2:])
 		case bytes.Equal(line, []byte("S PASSWORD_FROM_CACHE")):
 			fromCache = true
 		case bytes.HasPrefix(line, []byte("INQUIRE QUALITY ")):
-			pin, err = getPIN(line[16:])
-			if err != nil {
-				return
-			}
+			pin = getPIN(line[16:])
 			if quality, ok := c.qualityFunc(pin); ok {
 				if quality < -100 {
 					quality = -100
@@ -402,14 +394,26 @@ func IsCancelled(err error) bool {
 }
 
 func escape(s string) string {
-	s = strings.ReplaceAll(s, "%", "%25")
-	s = strings.ReplaceAll(s, "\n", "%0A")
-	return s
+	bytes := []byte(s)
+	escapedBytes := make([]byte, 0, len(bytes))
+	for _, b := range bytes {
+		switch b {
+		case '\n':
+			escapedBytes = append(escapedBytes, '%', '0', 'A')
+		case '\r':
+			escapedBytes = append(escapedBytes, '%', '0', 'D')
+		case '%':
+			escapedBytes = append(escapedBytes, '%', '2', '5')
+		default:
+			escapedBytes = append(escapedBytes, b)
+		}
+	}
+	return string(escapedBytes)
 }
 
 // getPIN parses a PIN from suffix.
-func getPIN(suffix []byte) (password string, err error) {
-	return url.QueryUnescape(string(suffix))
+func getPIN(data []byte) string {
+	return string(unescape(data))
 }
 
 // isBlank returns if line is blank.
@@ -437,6 +441,18 @@ func isOK(line []byte) bool {
 	return bytes.HasPrefix(line, []byte("OK"))
 }
 
+// isUppercaseHexDigit returns if c is an uppercase hexadecimal digit.
+func isUppercaseHexDigit(c byte) bool {
+	switch {
+	case '0' <= c && c <= '9':
+		return true
+	case 'A' <= c && c <= 'F':
+		return true
+	default:
+		return false
+	}
+}
+
 // newError returns an error parsed from line.
 func newError(line []byte) error {
 	match := errorRx.FindSubmatch(line)
@@ -447,5 +463,39 @@ func newError(line []byte) error {
 	return &AssuanError{
 		Code:        code,
 		Description: string(match[2]),
+	}
+}
+
+// unescape unescapes data, interpreting invalid escape sequences literally
+// rather than returning an error.
+//
+// This is to work around a bug in pinentry-mac 1.1.1 (and possibly earlier
+// versions) which does not escape the PIN in INQUIRE QUALITY messages to the
+// client.
+func unescape(data []byte) []byte {
+	unescapedData := make([]byte, 0, len(data))
+	for i := 0; i < len(data); {
+		if i < len(data)-2 && data[i] == '%' && isUppercaseHexDigit(data[i+1]) && isUppercaseHexDigit(data[i+2]) {
+			c := (uppercaseHexDigitValue(data[i+1]) << 4) + uppercaseHexDigitValue(data[i+2])
+			unescapedData = append(unescapedData, c)
+			i += 3
+		} else {
+			unescapedData = append(unescapedData, data[i])
+			i++
+		}
+	}
+	return unescapedData
+}
+
+// uppercaseHexDigitValue returns the value of the uppercase hexadecimal digit
+// c.
+func uppercaseHexDigitValue(c byte) byte {
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0'
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 0xA
+	default:
+		return 0
 	}
 }
