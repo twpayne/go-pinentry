@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"go.uber.org/multierr"
 )
 
 // Options.
@@ -235,7 +234,7 @@ func NewClient(options ...ClientOption) (c *Client, err error) {
 
 	defer func() {
 		if err != nil {
-			err = multierr.Append(err, c.Close())
+			err = errors.Join(err, c.Close())
 		}
 	}()
 
@@ -261,7 +260,7 @@ func NewClient(options ...ClientOption) (c *Client, err error) {
 // Close closes the connection to the pinentry process.
 func (c *Client) Close() (err error) {
 	defer func() {
-		err = multierr.Append(err, c.process.Close())
+		err = errors.Join(err, c.process.Close())
 	}()
 	if err = c.writeLine("BYE"); err != nil {
 		return
