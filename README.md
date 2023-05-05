@@ -38,16 +38,6 @@ pinentry](https://www.gnupg.org/related_software/pinentry/index.html).
 	}
 ```
 
-## Comparison with related packages
-
-Compared to
-[`github.com/gopasspw/pinentry`](https://github.com/gopasspw/pinentry), this
-package:
-* Implements all `pinentry` features.
-* Includes tests.
-* Implements a full parser of the underlying Assuan protocol for better
-  compatibility with all `pinentry` implementations.
-
 ## License
 
 MIT
