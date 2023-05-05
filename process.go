@@ -2,6 +2,7 @@ package pinentry
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"os/exec"
 )
