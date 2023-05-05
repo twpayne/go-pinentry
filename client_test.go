@@ -7,9 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alecthomas/assert/v2"
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/twpayne/go-pinentry"
 )
@@ -21,10 +20,10 @@ func TestClientClose(t *testing.T) {
 	c, err := pinentry.NewClient(
 		pinentry.WithProcess(p),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientArgs(t *testing.T) {
@@ -68,10 +67,10 @@ func TestClientArgs(t *testing.T) {
 			clientOptions := []pinentry.ClientOption{pinentry.WithProcess(p)}
 			clientOptions = append(clientOptions, tc.clientOptions...)
 			c, err := pinentry.NewClient(clientOptions...)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			p.expectClose()
-			require.NoError(t, c.Close())
+			assert.NoError(t, c.Close())
 		})
 	}
 }
@@ -84,10 +83,10 @@ func TestClientBinaryName(t *testing.T) {
 		pinentry.WithBinaryName("pinentry-test"),
 		pinentry.WithProcess(p),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientCommands(t *testing.T) {
@@ -178,10 +177,10 @@ func TestClientCommands(t *testing.T) {
 			clientOptions := []pinentry.ClientOption{pinentry.WithProcess(p)}
 			clientOptions = append(clientOptions, tc.clientOptions...)
 			c, err := pinentry.NewClient(clientOptions...)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			p.expectClose()
-			require.NoError(t, c.Close())
+			assert.NoError(t, c.Close())
 		})
 	}
 }
@@ -193,7 +192,7 @@ func TestClientGetPIN(t *testing.T) {
 	c, err := pinentry.NewClient(
 		pinentry.WithProcess(p),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	expectedPIN := "abc"
 	expectedFromCache := false
@@ -201,12 +200,12 @@ func TestClientGetPIN(t *testing.T) {
 	p.expectReadLine("D " + expectedPIN)
 	p.expectReadLine("OK")
 	actualPIN, actualFromCache, err := c.GetPIN()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expectedPIN, actualPIN)
 	assert.Equal(t, expectedFromCache, actualFromCache)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientConfirm(t *testing.T) {
@@ -216,17 +215,17 @@ func TestClientConfirm(t *testing.T) {
 	c, err := pinentry.NewClient(
 		pinentry.WithProcess(p),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	expectedConfirm := true
 	p.expectWriteln("CONFIRM confirm")
 	p.expectReadLine("OK")
 	actualConfirm, err := c.Confirm("confirm")
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expectedConfirm, actualConfirm)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientConfirmCancel(t *testing.T) {
@@ -236,17 +235,17 @@ func TestClientConfirmCancel(t *testing.T) {
 	c, err := pinentry.NewClient(
 		pinentry.WithProcess(p),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	p.expectWriteln("CONFIRM confirm")
 	p.expectReadLine("ERR 83886179 Operation cancelled <Pinentry>")
 	actualConfirm, err := c.Confirm("confirm")
-	require.Error(t, err)
+	assert.Error(t, err)
 	assert.True(t, pinentry.IsCancelled(err))
 	assert.Equal(t, false, actualConfirm)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientGetPINCancel(t *testing.T) {
@@ -256,18 +255,18 @@ func TestClientGetPINCancel(t *testing.T) {
 	c, err := pinentry.NewClient(
 		pinentry.WithProcess(p),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("ERR 83886179 Operation cancelled <Pinentry>")
 	actualPIN, actualFromCache, err := c.GetPIN()
-	require.Error(t, err)
+	assert.Error(t, err)
 	assert.True(t, pinentry.IsCancelled(err))
 	assert.Equal(t, "", actualPIN)
 	assert.Equal(t, false, actualFromCache)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientGetPINFromCache(t *testing.T) {
@@ -277,7 +276,7 @@ func TestClientGetPINFromCache(t *testing.T) {
 	c, err := pinentry.NewClient(
 		pinentry.WithProcess(p),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	expectedPIN := "abc"
 	expectedFromCache := true
@@ -286,12 +285,12 @@ func TestClientGetPINFromCache(t *testing.T) {
 	p.expectReadLine("D " + expectedPIN)
 	p.expectReadLine("OK")
 	actualPIN, actualFromCache, err := c.GetPIN()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expectedPIN, actualPIN)
 	assert.Equal(t, expectedFromCache, actualFromCache)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientGetPINQualityBar(t *testing.T) {
@@ -305,7 +304,7 @@ func TestClientGetPINQualityBar(t *testing.T) {
 			return 10 * len(pin), true
 		}),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	expectedPIN := "abc"
 	expectedFromCache := false
@@ -322,12 +321,12 @@ func TestClientGetPINQualityBar(t *testing.T) {
 	p.expectReadLine("D abc")
 	p.expectReadLine("OK")
 	actualPIN, actualFromCache, err := c.GetPIN()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expectedPIN, actualPIN)
 	assert.Equal(t, expectedFromCache, actualFromCache)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientGetPINQualityBarCancel(t *testing.T) {
@@ -341,7 +340,7 @@ func TestClientGetPINQualityBarCancel(t *testing.T) {
 			return 0, false
 		}),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	expectedPIN := "abc"
 	expectedFromCache := false
@@ -355,12 +354,12 @@ func TestClientGetPINQualityBarCancel(t *testing.T) {
 	p.expectReadLine("D abc")
 	p.expectReadLine("OK")
 	actualPIN, actualFromCache, err := c.GetPIN()
-	require.NoError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expectedPIN, actualPIN)
 	assert.Equal(t, expectedFromCache, actualFromCache)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientGetPINineUnexpectedResponse(t *testing.T) {
@@ -370,20 +369,20 @@ func TestClientGetPINineUnexpectedResponse(t *testing.T) {
 	c, err := pinentry.NewClient(
 		pinentry.WithProcess(p),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("unexpected response")
 	actualPIN, actualFromCache, err := c.GetPIN()
-	require.Error(t, err)
-	assert.ErrorIs(t, err, pinentry.UnexpectedResponseError{
+	assert.Error(t, err)
+	assert.Equal(t, pinentry.UnexpectedResponseError{
 		Line: "unexpected response",
-	})
+	}, err.(pinentry.UnexpectedResponseError)) //nolint:forcetypeassert,errorlint
 	assert.Equal(t, "", actualPIN)
 	assert.Equal(t, false, actualFromCache)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientReadLineIgnoreBlank(t *testing.T) {
@@ -397,10 +396,10 @@ func TestClientReadLineIgnoreBlank(t *testing.T) {
 	c, err := pinentry.NewClient(
 		pinentry.WithProcess(p),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func TestClientReadLineIgnoreComment(t *testing.T) {
@@ -412,10 +411,10 @@ func TestClientReadLineIgnoreComment(t *testing.T) {
 	c, err := pinentry.NewClient(
 		pinentry.WithProcess(p),
 	)
-	require.NoError(t, err)
+	assert.NoError(t, err)
 
 	p.expectClose()
-	require.NoError(t, c.Close())
+	assert.NoError(t, c.Close())
 }
 
 func newMockProcess(t *testing.T) *MockProcess {

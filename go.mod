@@ -1,17 +1,16 @@
 module github.com/twpayne/go-pinentry
 
-go 1.17
+go 1.19
 
 require (
+	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/golang/mock v1.6.0
 	github.com/rs/zerolog v1.26.0
-	github.com/stretchr/testify v1.7.0
 	go.uber.org/multierr v1.7.0
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/alecthomas/repr v0.2.0 // indirect
+	github.com/hexops/gotextdiff v1.0.3 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )

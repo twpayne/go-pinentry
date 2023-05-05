@@ -4,7 +4,6 @@ linters:
   - bidichk
   - bodyclose
   - contextcheck
-  - deadcode
   - depguard
   - dogsled
   - dupl
@@ -32,7 +31,6 @@ linters:
   - gosec
   - gosimple
   - govet
-  - ifshort
   - importas
   - ineffassign
   - ireturn
@@ -50,7 +48,6 @@ linters:
   - rowserrcheck
   - sqlclosecheck
   - staticcheck
-  - structcheck
   - stylecheck
   - tagliatelle
   - tenv
@@ -59,7 +56,6 @@ linters:
   - unconvert
   - unparam
   - unused
-  - varcheck
   - wastedassign
   - whitespace
   disable:
@@ -82,11 +78,13 @@ linters:
   - wsl
 
 linters-settings:
+  gci:
+    sections:
+    - standard
+    - default
+    - prefix(github.com/twpayne/go-pinentry)
+  gofumpt:
+    extra-rules: true
+    module-path: github.com/twpayne/go-pinentry
   goimports:
     local-prefixes: github.com/twpayne/go-pinentry
-
-      #issues:
-  #exclude-rules:
-    #- linters:
-    #- scopelint
-    #path: "_test\\.go"
