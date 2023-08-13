@@ -6,7 +6,6 @@ require (
 	github.com/alecthomas/assert/v2 v2.2.2
 	github.com/golang/mock v1.6.0
 	github.com/rs/zerolog v1.29.1
-	go.uber.org/multierr v1.11.0
 )
 
 require (

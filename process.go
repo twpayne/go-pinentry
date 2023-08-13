@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"io"
 	"os/exec"
-
-	"go.uber.org/multierr"
 )
 
 // A Process abstracts the interface to a pinentry Process.
@@ -23,9 +21,7 @@ type execProcess struct {
 }
 
 func (p *execProcess) Close() (err error) {
-	defer func() {
-		err = multierr.Append(err, p.cmd.Wait())
-	}()
+	defer combineErrorFunc(&err, p.cmd.Wait)
 	err = p.stdin.Close()
 	return
 }

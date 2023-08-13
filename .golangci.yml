@@ -4,7 +4,6 @@ linters:
   - bidichk
   - bodyclose
   - contextcheck
-  - depguard
   - dogsled
   - dupl
   - durationcheck
@@ -36,7 +35,6 @@ linters:
   - ireturn
   - makezero
   - misspell
-  - nakedret
   - nilerr
   - nilnil
   - noctx
@@ -60,6 +58,7 @@ linters:
   - whitespace
   disable:
   - cyclop
+  - depguard
   - exhaustivestruct
   - forbidigo
   - funlen
@@ -68,6 +67,7 @@ linters:
   - godox
   - gomnd
   - lll
+  - nakedret
   - nestif
   - nlreturn
   - paralleltest
