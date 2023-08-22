@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/twpayne/go-pinentry"
+	"github.com/twpayne/go-pinentry/v2"
 )
 
 func run(logger *pinentry.Logger) error {

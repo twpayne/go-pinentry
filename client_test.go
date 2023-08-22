@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/assert/v2"
 	"github.com/golang/mock/gomock"
 
-	"github.com/twpayne/go-pinentry"
+	"github.com/twpayne/go-pinentry/v2"
 )
 
 func TestClientClose(t *testing.T) {
