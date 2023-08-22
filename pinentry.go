@@ -14,8 +14,6 @@ import (
 	"regexp"
 	"strconv"
 	"time"
-
-	"github.com/rs/zerolog"
 )
 
 // Options.
@@ -75,7 +73,7 @@ type Client struct {
 	commands    []string
 	process     Process
 	qualityFunc QualityFunc
-	logger      *zerolog.Logger
+	logger      *Logger
 }
 
 // A ClientOption sets an option on a Client.
@@ -139,7 +137,7 @@ func WithKeyInfo(keyInfo string) ClientOption {
 }
 
 // WithLogger sets the logger.
-func WithLogger(logger *zerolog.Logger) ClientOption {
+func WithLogger(logger *Logger) ClientOption {
 	return func(c *Client) {
 		c.logger = logger
 	}
@@ -343,11 +341,9 @@ func (c *Client) command(command string) error {
 func (c *Client) readLine() ([]byte, error) {
 	for {
 		line, _, err := c.process.ReadLine()
+		logErrorOrInfo(c.logger, "readLine", err, "line", line)
 		if err != nil {
 			return nil, err
-		}
-		if c.logger != nil {
-			c.logger.Err(err).Bytes("line", line).Msg("readLine")
 		}
 		switch {
 		case isBlank(line):
@@ -375,9 +371,7 @@ func (c *Client) readOK() error {
 // writeLine writes a single line.
 func (c *Client) writeLine(line string) error {
 	_, err := c.process.Write([]byte(line + "\n"))
-	if c.logger != nil {
-		c.logger.Err(err).Str("line", line).Msg("write")
-	}
+	logErrorOrInfo(c.logger, "write", err, "line", line)
 	return err
 }
 

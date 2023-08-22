@@ -30,3 +30,13 @@ func combineErrorFunc(errp *error, f func() error) {
 		*errp = combineErrors(*errp, err)
 	}
 }
+
+func logErrorOrInfo(logger *Logger, msg string, err error, args ...any) {
+	switch {
+	case logger == nil:
+	case err != nil:
+		logger.Error(msg, append([]any{"err", err}, args...)...)
+	default:
+		logger.Info(msg, args...)
+	}
+}

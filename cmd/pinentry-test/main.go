@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-
 	"github.com/twpayne/go-pinentry"
 )
 
-func run(logger *zerolog.Logger) error {
+func run(logger *pinentry.Logger) error {
 	client, err := pinentry.NewClient(
 		pinentry.WithBinaryNameFromGnuPGAgentConf(),
 		pinentry.WithDesc("My multiline\ndescription"),
@@ -31,7 +28,7 @@ func run(logger *zerolog.Logger) error {
 	}
 	defer func() {
 		if err := client.Close(); err != nil {
-			logger.Err(err).Msg("close")
+			logger.Error("close", "err", err)
 		}
 	}()
 
@@ -51,9 +48,9 @@ func run(logger *zerolog.Logger) error {
 }
 
 func main() {
-	logger := log.Output(zerolog.NewConsoleWriter())
-	if err := run(&logger); err != nil {
-		logger.Err(err).Msg("error")
+	logger := pinentry.DefaultLogger()
+	if err := run(logger); err != nil {
+		logger.Error(err.Error())
 		os.Exit(1)
 	}
 }
