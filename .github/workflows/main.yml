@@ -1,4 +1,4 @@
-name: Test
+name: main
 on:
   pull_request:
   push:
@@ -33,9 +33,5 @@ jobs:
       with:
         go-version: stable
     - uses: golangci/golangci-lint-action@08e2f20817b15149a52b5b3ebe7de50aff2ba8c5
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Lint
-      uses: golangci/golangci-lint-action@v2
       with:
-        version: v1.54.0
+        version: v1.54.2
