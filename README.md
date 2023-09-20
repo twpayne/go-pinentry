@@ -19,7 +19,7 @@ pinentry](https://www.gnupg.org/related_software/pinentry/index.html).
 		pinentry.WithDesc("My description"),
 		pinentry.WithGPGTTY(),
 		pinentry.WithPrompt("My prompt:"),
-		pinentry.WithTitle("My title")
+		pinentry.WithTitle("My title"),
 	)
 	if err != nil {
 		return err
