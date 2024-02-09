@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/twpayne/go-pinentry/v2"
+	"github.com/twpayne/go-pinentry/v3"
 )
 
 func run() error {
