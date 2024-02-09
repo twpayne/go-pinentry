@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/twpayne/go-pinentry/v2"
 )
 
-func run(logger *pinentry.Logger) error {
+func run() error {
 	client, err := pinentry.NewClient(
 		pinentry.WithBinaryNameFromGnuPGAgentConf(),
 		pinentry.WithDesc("My multiline\ndescription"),
@@ -21,14 +22,13 @@ func run(logger *pinentry.Logger) error {
 			return quality, true
 		}),
 		pinentry.WithTitle("My title"),
-		pinentry.WithLogger(logger),
 	)
 	if err != nil {
 		return err
 	}
 	defer func() {
 		if err := client.Close(); err != nil {
-			logger.Error("close", "err", err)
+			slog.Error("close", "err", err)
 		}
 	}()
 
@@ -48,9 +48,8 @@ func run(logger *pinentry.Logger) error {
 }
 
 func main() {
-	logger := pinentry.DefaultLogger()
-	if err := run(logger); err != nil {
-		logger.Error(err.Error())
+	if err := run(); err != nil {
+		slog.Error(err.Error())
 		os.Exit(1)
 	}
 }
