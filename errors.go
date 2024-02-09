@@ -1,6 +1,9 @@
 package pinentry
 
-import "errors"
+import (
+	"errors"
+	"log/slog"
+)
 
 // combineErrors combines all non-nil errors in errs into one. If there are no
 // non-nil errors, it returns nil. If there is exactly one non-nil error then it
@@ -31,7 +34,7 @@ func combineErrorFunc(errp *error, f func() error) {
 	}
 }
 
-func logErrorOrInfo(logger *Logger, msg string, err error, args ...any) {
+func logErrorOrInfo(logger *slog.Logger, msg string, err error, args ...any) {
 	switch {
 	case logger == nil:
 	case err != nil:

@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strconv"
 	"time"
@@ -73,7 +74,7 @@ type Client struct {
 	commands    []string
 	process     Process
 	qualityFunc QualityFunc
-	logger      *Logger
+	logger      *slog.Logger
 }
 
 // A ClientOption sets an option on a Client.
@@ -137,7 +138,7 @@ func WithKeyInfo(keyInfo string) ClientOption {
 }
 
 // WithLogger sets the logger.
-func WithLogger(logger *Logger) ClientOption {
+func WithLogger(logger *slog.Logger) ClientOption {
 	return func(c *Client) {
 		c.logger = logger
 	}
