@@ -266,6 +266,23 @@ func (c *Client) Close() (err error) {
 	return
 }
 
+// ClearPassphrase clears the cached passphrase associated with the key
+// identified by cacheID.
+func (c *Client) ClearPassphrase(cacheID string) error {
+	command := "CLEARPASSPHRASE " + escape(cacheID)
+	if err := c.writeLine(command); err != nil {
+		return err
+	}
+	switch line, err := c.readLine(); {
+	case err != nil:
+		return err
+	case isOK(line):
+		return nil
+	default:
+		return newUnexpectedResponseError(line)
+	}
+}
+
 // Confirm asks the user for confirmation.
 func (c *Client) Confirm(option string) (bool, error) {
 	command := "CONFIRM"

@@ -185,6 +185,23 @@ func TestClientCommands(t *testing.T) {
 	}
 }
 
+func TestClientClearPassphrase(t *testing.T) {
+	p := newMockProcess(t)
+
+	p.expectStart("pinentry", nil)
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
+	)
+	assert.NoError(t, err)
+
+	p.expectWriteln("CLEARPASSPHRASE cacheID")
+	p.expectReadLine("OK")
+	assert.NoError(t, c.ClearPassphrase("cacheID"))
+
+	p.expectClose()
+	assert.NoError(t, c.Close())
+}
+
 func TestClientGetPIN(t *testing.T) {
 	p := newMockProcess(t)
 
