@@ -1,4 +1,4 @@
-//go:generate mockgen -destination=mockprocess_test.go -package=pinentry_test . Process
+//go:generate go run github.com/golang/mock/mockgen@v1.5.0 -destination=mockprocess_test.go -package=pinentry_test . Process
 
 package pinentry_test
 
