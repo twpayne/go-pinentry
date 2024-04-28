@@ -1,4 +1,4 @@
-//go:generate mockgen -destination=mockprocess_test.go -package=pinentry_test . Process
+//go:generate go run github.com/golang/mock/mockgen@v1.5.0 -destination=mockprocess_test.go -package=pinentry_test . Process
 
 package pinentry_test
 
@@ -114,6 +114,18 @@ func TestClientCommands(t *testing.T) {
 		},
 		{
 			clientOptions: []pinentry.ClientOption{
+				pinentry.WithGenPIN("genpin"),
+			},
+			expectedCommand: "SETGENPIN genpin",
+		},
+		{
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithGenPINToolTip("genpin_tt"),
+			},
+			expectedCommand: "SETGENPIN_TT genpin_tt",
+		},
+		{
+			clientOptions: []pinentry.ClientOption{
 				pinentry.WithKeyInfo("keyinfo"),
 			},
 			expectedCommand: "SETKEYINFO keyinfo",
@@ -158,6 +170,24 @@ func TestClientCommands(t *testing.T) {
 		},
 		{
 			clientOptions: []pinentry.ClientOption{
+				pinentry.WithRepeat("repeat"),
+			},
+			expectedCommand: "SETREPEAT repeat",
+		},
+		{
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithRepeatError("error"),
+			},
+			expectedCommand: "SETREPEATERROR error",
+		},
+		{
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithRepeatOK("ok"),
+			},
+			expectedCommand: "SETREPEATOK ok",
+		},
+		{
+			clientOptions: []pinentry.ClientOption{
 				pinentry.WithTimeout(time.Second),
 			},
 			expectedCommand: "SETTIMEOUT 1",
@@ -185,6 +215,23 @@ func TestClientCommands(t *testing.T) {
 	}
 }
 
+func TestClientClearPassphrase(t *testing.T) {
+	p := newMockProcess(t)
+
+	p.expectStart("pinentry", nil)
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
+	)
+	assert.NoError(t, err)
+
+	p.expectWriteln("CLEARPASSPHRASE cacheID")
+	p.expectReadLine("OK")
+	assert.NoError(t, c.ClearPassphrase("cacheID"))
+
+	p.expectClose()
+	assert.NoError(t, c.Close())
+}
+
 func TestClientGetPIN(t *testing.T) {
 	p := newMockProcess(t)
 
@@ -194,15 +241,15 @@ func TestClientGetPIN(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	expectedPIN := "abc"
-	expectedFromCache := false
+	expected := pinentry.GetPINResult{
+		PIN: "abc",
+	}
 	p.expectWriteln("GETPIN")
-	p.expectReadLine("D " + expectedPIN)
+	p.expectReadLine("D " + expected.PIN)
 	p.expectReadLine("OK")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	actual, err := c.GetPIN()
 	assert.NoError(t, err)
-	assert.Equal(t, expectedPIN, actualPIN)
-	assert.Equal(t, expectedFromCache, actualFromCache)
+	assert.Equal(t, expected, actual)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())
@@ -259,11 +306,9 @@ func TestClientGetPINCancel(t *testing.T) {
 
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("ERR 83886179 Operation cancelled <Pinentry>")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	_, err = c.GetPIN()
 	assert.Error(t, err)
 	assert.True(t, pinentry.IsCancelled(err))
-	assert.Equal(t, "", actualPIN)
-	assert.Equal(t, false, actualFromCache)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())
@@ -278,16 +323,17 @@ func TestClientGetPINFromCache(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	expectedPIN := "abc"
-	expectedFromCache := true
+	expected := pinentry.GetPINResult{
+		PIN:               "abc",
+		PasswordFromCache: true,
+	}
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("S PASSWORD_FROM_CACHE")
-	p.expectReadLine("D " + expectedPIN)
+	p.expectReadLine("D " + expected.PIN)
 	p.expectReadLine("OK")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	actual, err := c.GetPIN()
 	assert.NoError(t, err)
-	assert.Equal(t, expectedPIN, actualPIN)
-	assert.Equal(t, expectedFromCache, actualFromCache)
+	assert.Equal(t, expected, actual)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())
@@ -306,8 +352,9 @@ func TestClientGetPINQualityBar(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	expectedPIN := "abc"
-	expectedFromCache := false
+	expected := pinentry.GetPINResult{
+		PIN: "abc",
+	}
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("INQUIRE QUALITY a")
 	p.expectWriteln("D 10")
@@ -320,10 +367,9 @@ func TestClientGetPINQualityBar(t *testing.T) {
 	p.expectWriteln("END")
 	p.expectReadLine("D abc")
 	p.expectReadLine("OK")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	actual, err := c.GetPIN()
 	assert.NoError(t, err)
-	assert.Equal(t, expectedPIN, actualPIN)
-	assert.Equal(t, expectedFromCache, actualFromCache)
+	assert.Equal(t, expected, actual)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())
@@ -342,8 +388,9 @@ func TestClientGetPINQualityBarCancel(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	expectedPIN := "abc"
-	expectedFromCache := false
+	expected := pinentry.GetPINResult{
+		PIN: "abc",
+	}
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("INQUIRE QUALITY a")
 	p.expectWriteln("CAN")
@@ -353,10 +400,36 @@ func TestClientGetPINQualityBarCancel(t *testing.T) {
 	p.expectWriteln("CAN")
 	p.expectReadLine("D abc")
 	p.expectReadLine("OK")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	actual, err := c.GetPIN()
 	assert.NoError(t, err)
-	assert.Equal(t, expectedPIN, actualPIN)
-	assert.Equal(t, expectedFromCache, actualFromCache)
+	assert.Equal(t, expected, actual)
+
+	p.expectClose()
+	assert.NoError(t, c.Close())
+}
+
+func TestClientGetPINRepeat(t *testing.T) {
+	p := newMockProcess(t)
+
+	p.expectStart("pinentry", nil)
+	p.expectWritelnOK("SETREPEAT repeat")
+	c, err := pinentry.NewClient(
+		pinentry.WithRepeat("repeat"),
+		pinentry.WithProcess(p),
+	)
+	assert.NoError(t, err)
+
+	expected := pinentry.GetPINResult{
+		PIN:         "abc",
+		PINRepeated: true,
+	}
+	p.expectWriteln("GETPIN")
+	p.expectReadLine("S PIN_REPEATED")
+	p.expectReadLine("D " + expected.PIN)
+	p.expectReadLine("OK")
+	actual, err := c.GetPIN()
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())
@@ -373,13 +446,28 @@ func TestClientGetPINineUnexpectedResponse(t *testing.T) {
 
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("unexpected response")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	_, err = c.GetPIN()
 	assert.Error(t, err)
 	assert.Equal(t, pinentry.UnexpectedResponseError{
 		Line: "unexpected response",
 	}, err.(pinentry.UnexpectedResponseError)) //nolint:forcetypeassert,errorlint
-	assert.Equal(t, "", actualPIN)
-	assert.Equal(t, false, actualFromCache)
+
+	p.expectClose()
+	assert.NoError(t, c.Close())
+}
+
+func TestClientMessage(t *testing.T) {
+	p := newMockProcess(t)
+
+	p.expectStart("pinentry", nil)
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
+	)
+	assert.NoError(t, err)
+
+	p.expectWriteln("MESSAGE")
+	p.expectReadLine("OK")
+	assert.NoError(t, c.Message())
 
 	p.expectClose()
 	assert.NoError(t, c.Close())

@@ -6,6 +6,7 @@
 package pinentry
 
 // FIXME add secure logging mode to avoid logging PIN
+// FIXME add GETINFO support
 
 import (
 	"bytes"
@@ -132,6 +133,16 @@ func WithError(err string) ClientOption {
 	return WithCommandf("SETERROR %s", escape(err))
 }
 
+// WithGenPIN sets the label to be used for a generate action.
+func WithGenPIN(genPIN string) ClientOption {
+	return WithCommandf("SETGENPIN %s", escape(genPIN))
+}
+
+// WithGenPINToolTip sets the tooltip to be used for a generate action.
+func WithGenPINToolTip(genPINTT string) ClientOption {
+	return WithCommandf("SETGENPIN_TT %s", escape(genPINTT))
+}
+
 // WithKeyInfo sets a stable key identifier for use with password caching.
 func WithKeyInfo(keyInfo string) ClientOption {
 	return WithCommandf("SETKEYINFO %s", escape(keyInfo))
@@ -202,6 +213,21 @@ func WithQualityBarToolTip(qualityBarTT string) ClientOption {
 	return WithCommandf("SETQUALITYBAR_TT %s", escape(qualityBarTT))
 }
 
+// WithRepeat sets the repeat passphrase.
+func WithRepeat(repeat string) ClientOption {
+	return WithCommandf("SETREPEAT %s", escape(repeat))
+}
+
+// WithRepeatError sets the repeat error message.
+func WithRepeatError(repeatError string) ClientOption {
+	return WithCommandf("SETREPEATERROR %s", escape(repeatError))
+}
+
+// WithRepeatOK sets the repeat OK message.
+func WithRepeatOK(repeatOK string) ClientOption {
+	return WithCommandf("SETREPEATOK %s", escape(repeatOK))
+}
+
 // WithTimeout sets the timeout.
 func WithTimeout(timeout time.Duration) ClientOption {
 	return WithCommandf("SETTIMEOUT %d", timeout/time.Second)
@@ -266,6 +292,23 @@ func (c *Client) Close() (err error) {
 	return
 }
 
+// ClearPassphrase clears the cached passphrase associated with the key
+// identified by cacheID.
+func (c *Client) ClearPassphrase(cacheID string) error {
+	command := "CLEARPASSPHRASE " + escape(cacheID)
+	if err := c.writeLine(command); err != nil {
+		return err
+	}
+	switch line, err := c.readLine(); {
+	case err != nil:
+		return err
+	case isOK(line):
+		return nil
+	default:
+		return newUnexpectedResponseError(line)
+	}
+}
+
 // Confirm asks the user for confirmation.
 func (c *Client) Confirm(option string) (bool, error) {
 	command := "CONFIRM"
@@ -287,46 +330,70 @@ func (c *Client) Confirm(option string) (bool, error) {
 	}
 }
 
+// A GetPINResult is the result of a call to Client.GetPIN.
+type GetPINResult struct {
+	PIN               string
+	PasswordFromCache bool
+	PINRepeated       bool
+}
+
 // GetPIN gets a PIN from the user. If the user cancels, an error is returned
 // which can be tested with IsCancelled.
-func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
-	if err = c.writeLine("GETPIN"); err != nil {
-		return "", false, err
+func (c *Client) GetPIN() (GetPINResult, error) {
+	if err := c.writeLine("GETPIN"); err != nil {
+		return GetPINResult{}, err
 	}
+	var result GetPINResult
 	for {
-		var line []byte
-		switch line, err = c.readLine(); {
+		switch line, err := c.readLine(); {
 		case err != nil:
-			return
+			return GetPINResult{}, err
 		case isOK(line):
-			return
+			return result, nil
 		case isData(line):
-			pin = getPIN(line[2:])
+			result.PIN = getPIN(line[2:])
 		case bytes.Equal(line, []byte("S PASSWORD_FROM_CACHE")):
-			fromCache = true
+			result.PasswordFromCache = true
+		case bytes.Equal(line, []byte("S PIN_REPEATED")):
+			result.PINRepeated = true
 		case bytes.HasPrefix(line, []byte("INQUIRE QUALITY ")):
-			pin = getPIN(line[16:])
+			pin := getPIN(line[16:])
 			if quality, ok := c.qualityFunc(pin); ok {
 				if quality < -100 {
 					quality = -100
 				} else if quality > 100 {
 					quality = 100
 				}
-				if err = c.writeLine(fmt.Sprintf("D %d", quality)); err != nil {
-					return
+				if err := c.writeLine(fmt.Sprintf("D %d", quality)); err != nil {
+					return GetPINResult{}, err
 				}
-				if err = c.writeLine("END"); err != nil {
-					return
+				if err := c.writeLine("END"); err != nil {
+					return GetPINResult{}, err
 				}
 			} else {
-				if err = c.writeLine("CAN"); err != nil {
-					return
+				if err := c.writeLine("CAN"); err != nil {
+					return GetPINResult{}, err
 				}
 			}
 		default:
-			err = newUnexpectedResponseError(line)
-			return
+			return GetPINResult{}, newUnexpectedResponseError(line)
 		}
+	}
+}
+
+// Message shows the user a message.
+func (c *Client) Message() error {
+	command := "MESSAGE"
+	if err := c.writeLine(command); err != nil {
+		return err
+	}
+	switch line, err := c.readLine(); {
+	case err != nil:
+		return err
+	case isOK(line):
+		return nil
+	default:
+		return newUnexpectedResponseError(line)
 	}
 }
 
