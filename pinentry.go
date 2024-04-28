@@ -6,6 +6,7 @@
 package pinentry
 
 // FIXME add secure logging mode to avoid logging PIN
+// FIXME add GETINFO support
 
 import (
 	"bytes"
