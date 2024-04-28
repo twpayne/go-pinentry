@@ -202,6 +202,21 @@ func WithQualityBarToolTip(qualityBarTT string) ClientOption {
 	return WithCommandf("SETQUALITYBAR_TT %s", escape(qualityBarTT))
 }
 
+// WithRepeat sets the repeat passphrase.
+func WithRepeat(repeat string) ClientOption {
+	return WithCommandf("SETREPEAT %s", escape(repeat))
+}
+
+// WithRepeatError sets the repeat error message.
+func WithRepeatError(repeatError string) ClientOption {
+	return WithCommandf("SETREPEATERROR %s", escape(repeatError))
+}
+
+// WithRepeatOK sets the repeat OK message.
+func WithRepeatOK(repeatOK string) ClientOption {
+	return WithCommandf("SETREPEATOK %s", escape(repeatOK))
+}
+
 // WithTimeout sets the timeout.
 func WithTimeout(timeout time.Duration) ClientOption {
 	return WithCommandf("SETTIMEOUT %d", timeout/time.Second)
@@ -308,6 +323,7 @@ func (c *Client) Confirm(option string) (bool, error) {
 type GetPINResult struct {
 	PIN               string
 	PasswordFromCache bool
+	PINRepeated       bool
 }
 
 // GetPIN gets a PIN from the user. If the user cancels, an error is returned
@@ -327,6 +343,8 @@ func (c *Client) GetPIN() (GetPINResult, error) {
 			result.PIN = getPIN(line[2:])
 		case bytes.Equal(line, []byte("S PASSWORD_FROM_CACHE")):
 			result.PasswordFromCache = true
+		case bytes.Equal(line, []byte("S PIN_REPEATED")):
+			result.PINRepeated = true
 		case bytes.HasPrefix(line, []byte("INQUIRE QUALITY ")):
 			pin := getPIN(line[16:])
 			if quality, ok := c.qualityFunc(pin); ok {

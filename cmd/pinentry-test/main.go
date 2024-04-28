@@ -21,6 +21,7 @@ func run() error {
 			}
 			return quality, true
 		}),
+		pinentry.WithRepeat("Repeat password:"),
 		pinentry.WithTitle("My title"),
 	)
 	if err != nil {
@@ -38,8 +39,6 @@ func run() error {
 		return err
 	case err != nil:
 		return err
-	case result.PasswordFromCache:
-		fmt.Printf("PIN: %s (from cache)\n", result.PIN)
 	default:
 		fmt.Printf("PIN: %s\n", result.PIN)
 	}

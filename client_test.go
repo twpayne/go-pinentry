@@ -158,6 +158,24 @@ func TestClientCommands(t *testing.T) {
 		},
 		{
 			clientOptions: []pinentry.ClientOption{
+				pinentry.WithRepeat("repeat"),
+			},
+			expectedCommand: "SETREPEAT repeat",
+		},
+		{
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithRepeatError("error"),
+			},
+			expectedCommand: "SETREPEATERROR error",
+		},
+		{
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithRepeatOK("ok"),
+			},
+			expectedCommand: "SETREPEATOK ok",
+		},
+		{
+			clientOptions: []pinentry.ClientOption{
 				pinentry.WithTimeout(time.Second),
 			},
 			expectedCommand: "SETTIMEOUT 1",
@@ -369,6 +387,33 @@ func TestClientGetPINQualityBarCancel(t *testing.T) {
 	p.expectReadLine("INQUIRE QUALITY abc")
 	p.expectWriteln("CAN")
 	p.expectReadLine("D abc")
+	p.expectReadLine("OK")
+	actual, err := c.GetPIN()
+	assert.NoError(t, err)
+	assert.Equal(t, expected, actual)
+
+	p.expectClose()
+	assert.NoError(t, c.Close())
+}
+
+func TestClientGetPINRepeat(t *testing.T) {
+	p := newMockProcess(t)
+
+	p.expectStart("pinentry", nil)
+	p.expectWritelnOK("SETREPEAT repeat")
+	c, err := pinentry.NewClient(
+		pinentry.WithRepeat("repeat"),
+		pinentry.WithProcess(p),
+	)
+	assert.NoError(t, err)
+
+	expected := pinentry.GetPINResult{
+		PIN:         "abc",
+		PINRepeated: true,
+	}
+	p.expectWriteln("GETPIN")
+	p.expectReadLine("S PIN_REPEATED")
+	p.expectReadLine("D " + expected.PIN)
 	p.expectReadLine("OK")
 	actual, err := c.GetPIN()
 	assert.NoError(t, err)
