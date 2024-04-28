@@ -132,6 +132,16 @@ func WithError(err string) ClientOption {
 	return WithCommandf("SETERROR %s", escape(err))
 }
 
+// WithGenPIN sets the label to be used for a generate action.
+func WithGenPIN(genPIN string) ClientOption {
+	return WithCommandf("SETGENPIN %s", escape(genPIN))
+}
+
+// WithGenPINToolTip sets the tooltip to be used for a generate action.
+func WithGenPINToolTip(genPINTT string) ClientOption {
+	return WithCommandf("SETGENPIN_TT %s", escape(genPINTT))
+}
+
 // WithKeyInfo sets a stable key identifier for use with password caching.
 func WithKeyInfo(keyInfo string) ClientOption {
 	return WithCommandf("SETKEYINFO %s", escape(keyInfo))

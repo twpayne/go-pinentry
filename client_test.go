@@ -114,6 +114,18 @@ func TestClientCommands(t *testing.T) {
 		},
 		{
 			clientOptions: []pinentry.ClientOption{
+				pinentry.WithGenPIN("genpin"),
+			},
+			expectedCommand: "SETGENPIN genpin",
+		},
+		{
+			clientOptions: []pinentry.ClientOption{
+				pinentry.WithGenPINToolTip("genpin_tt"),
+			},
+			expectedCommand: "SETGENPIN_TT genpin_tt",
+		},
+		{
+			clientOptions: []pinentry.ClientOption{
 				pinentry.WithKeyInfo("keyinfo"),
 			},
 			expectedCommand: "SETKEYINFO keyinfo",
