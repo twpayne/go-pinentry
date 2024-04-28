@@ -385,6 +385,23 @@ func TestClientGetPINineUnexpectedResponse(t *testing.T) {
 	assert.NoError(t, c.Close())
 }
 
+func TestClientMessage(t *testing.T) {
+	p := newMockProcess(t)
+
+	p.expectStart("pinentry", nil)
+	c, err := pinentry.NewClient(
+		pinentry.WithProcess(p),
+	)
+	assert.NoError(t, err)
+
+	p.expectWriteln("MESSAGE")
+	p.expectReadLine("OK")
+	assert.NoError(t, c.Message())
+
+	p.expectClose()
+	assert.NoError(t, c.Close())
+}
+
 func TestClientReadLineIgnoreBlank(t *testing.T) {
 	p := newMockProcess(t)
 

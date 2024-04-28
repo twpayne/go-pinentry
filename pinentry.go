@@ -330,6 +330,22 @@ func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
 	}
 }
 
+// Message shows the user a message.
+func (c *Client) Message() error {
+	command := "MESSAGE"
+	if err := c.writeLine(command); err != nil {
+		return err
+	}
+	switch line, err := c.readLine(); {
+	case err != nil:
+		return err
+	case isOK(line):
+		return nil
+	default:
+		return newUnexpectedResponseError(line)
+	}
+}
+
 // command writes a command and reads an OK response.
 func (c *Client) command(command string) error {
 	if err := c.writeLine(command); err != nil {
