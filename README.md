@@ -26,15 +26,15 @@ pinentry](https://www.gnupg.org/related_software/pinentry/index.html).
 	}
 	defer client.Close()
 
-	switch pin, fromCache, err := client.GetPIN(); {
+	switch result, err := client.GetPIN(); {
 	case pinentry.IsCancelled(err):
 		fmt.Println("Cancelled")
 	case err != nil:
 		return err
-	case fromCache:
-		fmt.Printf("PIN: %s (from cache)\n", pin)
+	case result.PasswordFromCache:
+		fmt.Printf("PIN: %s (from cache)\n", result.PIN)
 	default:
-		fmt.Printf("PIN: %s\n", pin)
+		fmt.Printf("PIN: %s\n", result.PIN)
 	}
 ```
 

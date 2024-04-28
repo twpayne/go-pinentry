@@ -211,15 +211,15 @@ func TestClientGetPIN(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	expectedPIN := "abc"
-	expectedFromCache := false
+	expected := pinentry.GetPINResult{
+		PIN: "abc",
+	}
 	p.expectWriteln("GETPIN")
-	p.expectReadLine("D " + expectedPIN)
+	p.expectReadLine("D " + expected.PIN)
 	p.expectReadLine("OK")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	actual, err := c.GetPIN()
 	assert.NoError(t, err)
-	assert.Equal(t, expectedPIN, actualPIN)
-	assert.Equal(t, expectedFromCache, actualFromCache)
+	assert.Equal(t, expected, actual)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())
@@ -276,11 +276,9 @@ func TestClientGetPINCancel(t *testing.T) {
 
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("ERR 83886179 Operation cancelled <Pinentry>")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	_, err = c.GetPIN()
 	assert.Error(t, err)
 	assert.True(t, pinentry.IsCancelled(err))
-	assert.Equal(t, "", actualPIN)
-	assert.Equal(t, false, actualFromCache)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())
@@ -295,16 +293,17 @@ func TestClientGetPINFromCache(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	expectedPIN := "abc"
-	expectedFromCache := true
+	expected := pinentry.GetPINResult{
+		PIN:               "abc",
+		PasswordFromCache: true,
+	}
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("S PASSWORD_FROM_CACHE")
-	p.expectReadLine("D " + expectedPIN)
+	p.expectReadLine("D " + expected.PIN)
 	p.expectReadLine("OK")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	actual, err := c.GetPIN()
 	assert.NoError(t, err)
-	assert.Equal(t, expectedPIN, actualPIN)
-	assert.Equal(t, expectedFromCache, actualFromCache)
+	assert.Equal(t, expected, actual)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())
@@ -323,8 +322,9 @@ func TestClientGetPINQualityBar(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	expectedPIN := "abc"
-	expectedFromCache := false
+	expected := pinentry.GetPINResult{
+		PIN: "abc",
+	}
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("INQUIRE QUALITY a")
 	p.expectWriteln("D 10")
@@ -337,10 +337,9 @@ func TestClientGetPINQualityBar(t *testing.T) {
 	p.expectWriteln("END")
 	p.expectReadLine("D abc")
 	p.expectReadLine("OK")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	actual, err := c.GetPIN()
 	assert.NoError(t, err)
-	assert.Equal(t, expectedPIN, actualPIN)
-	assert.Equal(t, expectedFromCache, actualFromCache)
+	assert.Equal(t, expected, actual)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())
@@ -359,8 +358,9 @@ func TestClientGetPINQualityBarCancel(t *testing.T) {
 	)
 	assert.NoError(t, err)
 
-	expectedPIN := "abc"
-	expectedFromCache := false
+	expected := pinentry.GetPINResult{
+		PIN: "abc",
+	}
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("INQUIRE QUALITY a")
 	p.expectWriteln("CAN")
@@ -370,10 +370,9 @@ func TestClientGetPINQualityBarCancel(t *testing.T) {
 	p.expectWriteln("CAN")
 	p.expectReadLine("D abc")
 	p.expectReadLine("OK")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	actual, err := c.GetPIN()
 	assert.NoError(t, err)
-	assert.Equal(t, expectedPIN, actualPIN)
-	assert.Equal(t, expectedFromCache, actualFromCache)
+	assert.Equal(t, expected, actual)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())
@@ -390,13 +389,11 @@ func TestClientGetPINineUnexpectedResponse(t *testing.T) {
 
 	p.expectWriteln("GETPIN")
 	p.expectReadLine("unexpected response")
-	actualPIN, actualFromCache, err := c.GetPIN()
+	_, err = c.GetPIN()
 	assert.Error(t, err)
 	assert.Equal(t, pinentry.UnexpectedResponseError{
 		Line: "unexpected response",
 	}, err.(pinentry.UnexpectedResponseError)) //nolint:forcetypeassert,errorlint
-	assert.Equal(t, "", actualPIN)
-	assert.Equal(t, false, actualFromCache)
 
 	p.expectClose()
 	assert.NoError(t, c.Close())

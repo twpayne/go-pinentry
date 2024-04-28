@@ -304,45 +304,50 @@ func (c *Client) Confirm(option string) (bool, error) {
 	}
 }
 
+// A GetPINResult is the result of a call to Client.GetPIN.
+type GetPINResult struct {
+	PIN               string
+	PasswordFromCache bool
+}
+
 // GetPIN gets a PIN from the user. If the user cancels, an error is returned
 // which can be tested with IsCancelled.
-func (c *Client) GetPIN() (pin string, fromCache bool, err error) {
-	if err = c.writeLine("GETPIN"); err != nil {
-		return "", false, err
+func (c *Client) GetPIN() (GetPINResult, error) {
+	if err := c.writeLine("GETPIN"); err != nil {
+		return GetPINResult{}, err
 	}
+	var result GetPINResult
 	for {
-		var line []byte
-		switch line, err = c.readLine(); {
+		switch line, err := c.readLine(); {
 		case err != nil:
-			return
+			return GetPINResult{}, err
 		case isOK(line):
-			return
+			return result, nil
 		case isData(line):
-			pin = getPIN(line[2:])
+			result.PIN = getPIN(line[2:])
 		case bytes.Equal(line, []byte("S PASSWORD_FROM_CACHE")):
-			fromCache = true
+			result.PasswordFromCache = true
 		case bytes.HasPrefix(line, []byte("INQUIRE QUALITY ")):
-			pin = getPIN(line[16:])
+			pin := getPIN(line[16:])
 			if quality, ok := c.qualityFunc(pin); ok {
 				if quality < -100 {
 					quality = -100
 				} else if quality > 100 {
 					quality = 100
 				}
-				if err = c.writeLine(fmt.Sprintf("D %d", quality)); err != nil {
-					return
+				if err := c.writeLine(fmt.Sprintf("D %d", quality)); err != nil {
+					return GetPINResult{}, err
 				}
-				if err = c.writeLine("END"); err != nil {
-					return
+				if err := c.writeLine("END"); err != nil {
+					return GetPINResult{}, err
 				}
 			} else {
-				if err = c.writeLine("CAN"); err != nil {
-					return
+				if err := c.writeLine("CAN"); err != nil {
+					return GetPINResult{}, err
 				}
 			}
 		default:
-			err = newUnexpectedResponseError(line)
-			return
+			return GetPINResult{}, newUnexpectedResponseError(line)
 		}
 	}
 }

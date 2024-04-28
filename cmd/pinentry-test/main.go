@@ -32,16 +32,16 @@ func run() error {
 		}
 	}()
 
-	switch pin, fromCache, err := client.GetPIN(); {
+	switch result, err := client.GetPIN(); {
 	case pinentry.IsCancelled(err):
 		fmt.Println("Cancelled")
 		return err
 	case err != nil:
 		return err
-	case fromCache:
-		fmt.Printf("PIN: %s (from cache)\n", pin)
+	case result.PasswordFromCache:
+		fmt.Printf("PIN: %s (from cache)\n", result.PIN)
 	default:
-		fmt.Printf("PIN: %s\n", pin)
+		fmt.Printf("PIN: %s\n", result.PIN)
 	}
 
 	return nil
