@@ -1,4 +1,4 @@
-module github.com/twpayne/go-pinentry/v3
+module github.com/twpayne/go-pinentry/v4
 
 go 1.19
 
