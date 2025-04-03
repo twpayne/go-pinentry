@@ -382,7 +382,7 @@ func TestClientGetPINQualityBarCancel(t *testing.T) {
 	p.expectWritelnOK("SETQUALITYBAR")
 	c, err := pinentry.NewClient(
 		pinentry.WithProcess(p),
-		pinentry.WithQualityBar(func(pin string) (int, bool) {
+		pinentry.WithQualityBar(func(pin string) (int, bool) { //nolint:revive
 			return 0, false
 		}),
 	)
