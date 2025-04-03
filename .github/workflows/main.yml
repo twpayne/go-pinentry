@@ -15,11 +15,11 @@ jobs:
         - stable
       fail-fast: false
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
-    - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: ${{ matrix.go-version }}
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     - name: build
       run: go build ./...
     - name: test
@@ -27,10 +27,10 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
-    - uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+    - uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b
       with:
         go-version: stable
-    - uses: golangci/golangci-lint-action@82d40c283aeb1f2b6595839195e95c2d6a49081b
+    - uses: golangci/golangci-lint-action@1481404843c368bc19ca9406f87d6e0fc97bdcfd
       with:
         version: v1.54.2
