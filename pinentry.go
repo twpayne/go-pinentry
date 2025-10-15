@@ -111,7 +111,7 @@ func WithCommand(command string) ClientOption {
 
 // WithCommandf appends an Assuan command that is sent when the connection is
 // established, using fmt.Sprintf to format the command.
-func WithCommandf(format string, args ...interface{}) ClientOption {
+func WithCommandf(format string, args ...any) ClientOption {
 	command := fmt.Sprintf(format, args...)
 	return WithCommand(command)
 }
