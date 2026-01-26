@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 var gnuPGAgentConfPINEntryProgramRx = regexp.MustCompile(`(?m)^\s*pinentry-program\s+(\S+)`)
@@ -29,8 +30,17 @@ func WithBinaryNameFromGnuPGAgentConf() (clientOption ClientOption) {
 		return clientOption
 	}
 
+	// FIXME add support for ~user and ~user/
+	binaryName := string(match[1])
+	switch {
+	case binaryName == "~":
+		binaryName = userHomeDir
+	case strings.HasPrefix(binaryName, "~/"):
+		binaryName = userHomeDir + strings.TrimPrefix(binaryName, "~")
+	}
+
 	return func(c *Client) {
-		c.binaryName = string(match[1])
+		c.binaryName = binaryName
 	}
 }
 
