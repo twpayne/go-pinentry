@@ -64,7 +64,7 @@ func TestClientArgs(t *testing.T) {
 			p := newMockProcess(t)
 
 			p.expectStart("pinentry", tc.expectedArgs)
-			clientOptions := []pinentry.ClientOption{pinentry.WithProcess(p)}
+			clientOptions := []pinentry.ClientOption{pinentry.WithProcess(p)} //nolint:prealloc
 			clientOptions = append(clientOptions, tc.clientOptions...)
 			c, err := pinentry.NewClient(clientOptions...)
 			assert.NoError(t, err)
@@ -204,7 +204,7 @@ func TestClientCommands(t *testing.T) {
 
 			p.expectStart("pinentry", nil)
 			p.expectWritelnOK(tc.expectedCommand)
-			clientOptions := []pinentry.ClientOption{pinentry.WithProcess(p)}
+			clientOptions := []pinentry.ClientOption{pinentry.WithProcess(p)} //nolint:prealloc
 			clientOptions = append(clientOptions, tc.clientOptions...)
 			c, err := pinentry.NewClient(clientOptions...)
 			assert.NoError(t, err)

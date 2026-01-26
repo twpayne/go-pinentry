@@ -1,17 +1,27 @@
 version: "2"
 linters:
   enable:
+    - arangolint
+    - asasalint
     - asciicheck
     - bidichk
     - bodyclose
+    - containedctx
     - contextcheck
+    - copyloopvar
+    - decorder
     - dogsled
     - dupl
+    - dupword
     - durationcheck
+    - embeddedstructfieldcheck
     - err113
+    - errchkjson
     - errname
     - errorlint
     - exhaustive
+    - exptostd
+    - fatcontext
     - forcetypeassert
     - gochecknoinits
     - gocognit
@@ -31,22 +41,37 @@ linters:
     - nilnil
     - noctx
     - nolintlint
+    - nosprintfhostport
+    - perfsprint
     - prealloc
     - predeclared
     - promlinter
+    - protogetter
+    - reassign
+    - recvcheck
     - revive
     - rowserrcheck
+    - sloglint
+    - spancheck
     - sqlclosecheck
     - staticcheck
+    - tagalign
     - tagliatelle
+    - testableexamples
+    - testifylint
     - thelper
     - unconvert
     - unparam
+    - unqueryvet
+    - usestdlibvars
+    - usetesting
     - wastedassign
     - whitespace
   disable:
+    - canonicalheader
     - cyclop
     - depguard
+    - exhaustruct
     - forbidigo
     - funlen
     - gochecknoglobals
@@ -57,6 +82,8 @@ linters:
     - nakedret
     - nestif
     - nlreturn
+    - noinlineerr
+    - nonamedreturns
     - paralleltest
     - testpackage
     - tparallel
