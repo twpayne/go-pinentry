@@ -1,5 +1,7 @@
 package pinentry
 
+// FIXME add context support
+
 import (
 	"bufio"
 	"io"
@@ -23,7 +25,7 @@ type execProcess struct {
 func (p *execProcess) Close() (err error) {
 	defer combineErrorFunc(&err, p.cmd.Wait)
 	err = p.stdin.Close()
-	return
+	return err
 }
 
 func (p *execProcess) ReadLine() ([]byte, bool, error) {
@@ -31,19 +33,19 @@ func (p *execProcess) ReadLine() ([]byte, bool, error) {
 }
 
 func (p *execProcess) Start(name string, args []string) (err error) {
-	p.cmd = exec.Command(name, args...)
+	p.cmd = exec.Command(name, args...) //nolint:noctx
 	p.stdin, err = p.cmd.StdinPipe()
 	if err != nil {
-		return
+		return err
 	}
 	var stdoutPipe io.ReadCloser
 	stdoutPipe, err = p.cmd.StdoutPipe()
 	if err != nil {
-		return
+		return err
 	}
 	p.stdout = bufio.NewReader(stdoutPipe)
 	err = p.cmd.Start()
-	return
+	return err
 }
 
 func (p *execProcess) Write(data []byte) (int, error) {

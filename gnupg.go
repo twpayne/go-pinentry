@@ -16,17 +16,17 @@ func WithBinaryNameFromGnuPGAgentConf() (clientOption ClientOption) {
 
 	userHomeDir, err := os.UserHomeDir()
 	if err != nil {
-		return
+		return clientOption
 	}
 
 	data, err := os.ReadFile(filepath.Join(userHomeDir, ".gnupg", "gpg-agent.conf"))
 	if err != nil {
-		return
+		return clientOption
 	}
 
 	match := gnuPGAgentConfPINEntryProgramRx.FindSubmatch(data)
 	if match == nil {
-		return
+		return clientOption
 	}
 
 	return func(c *Client) {

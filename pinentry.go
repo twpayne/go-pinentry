@@ -182,7 +182,7 @@ func WithOption(option string) ClientOption {
 func WithOptions(options []string) ClientOption {
 	return func(c *Client) {
 		for _, option := range options {
-			command := fmt.Sprintf("OPTION %s", escape(option))
+			command := "OPTION " + escape(option)
 			c.commands = append(c.commands, command)
 		}
 	}
@@ -254,7 +254,7 @@ func NewClient(options ...ClientOption) (c *Client, err error) {
 
 	err = c.process.Start(c.binaryName, c.args)
 	if err != nil {
-		return
+		return c, err
 	}
 
 	defer func() {
@@ -266,16 +266,16 @@ func NewClient(options ...ClientOption) (c *Client, err error) {
 	var line []byte
 	line, err = c.readLine()
 	if err != nil {
-		return
+		return c, err
 	}
 	if !isOK(line) {
 		err = newUnexpectedResponseError(line)
-		return
+		return c, err
 	}
 
 	for _, command := range c.commands {
 		if err = c.command(command); err != nil {
-			return
+			return c, err
 		}
 	}
 
@@ -286,10 +286,10 @@ func NewClient(options ...ClientOption) (c *Client, err error) {
 func (c *Client) Close() (err error) {
 	defer combineErrorFunc(&err, c.process.Close)
 	if err = c.writeLine("BYE"); err != nil {
-		return
+		return err
 	}
 	err = c.readOK()
-	return
+	return err
 }
 
 // ClearPassphrase clears the cached passphrase associated with the key
