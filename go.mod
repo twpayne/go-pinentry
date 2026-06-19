@@ -5,12 +5,12 @@ go 1.24.0
 tool github.com/golang/mock/mockgen
 
 require (
-	github.com/alecthomas/assert/v2 v2.5.0
+	github.com/alecthomas/assert/v2 v2.11.0
 	github.com/golang/mock v1.6.0
 )
 
 require (
-	github.com/alecthomas/repr v0.3.0 // indirect
+	github.com/alecthomas/repr v0.5.2 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/sys v0.0.0-20210510120138-977fb7262007 // indirect
