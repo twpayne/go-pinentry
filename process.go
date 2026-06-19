@@ -12,7 +12,7 @@ import (
 type Process interface {
 	io.WriteCloser
 	ReadLine() ([]byte, bool, error)
-	Start(string, []string) error
+	Start(name string, args []string) error
 }
 
 // A execProcess executes a pinentry process.

@@ -6,6 +6,7 @@ linters:
     - asciicheck
     - bidichk
     - bodyclose
+    - clickhouselint
     - containedctx
     - contextcheck
     - copyloopvar
@@ -23,21 +24,36 @@ linters:
     - exptostd
     - fatcontext
     - forcetypeassert
+    - funcorder
     - gochecknoinits
+    - gochecksumtype
     - gocognit
     - gocritic
     - gocyclo
+    - godoclint
     - godot
     - goheader
     - gomoddirectives
-    - gomodguard
+    - gomodguard_v2
     - goprintffuncname
     - gosec
+    - gosmopolitan
+    - grouper
+    - iface
     - importas
+    - inamedparam
+    - interfacebloat
+    - intrange
+    - iotamixing
     - ireturn
+    - loggercheck
     - makezero
+    - mirror
     - misspell
+    - modernize
+    - musttag
     - nilerr
+    - nilnesserr
     - nilnil
     - noctx
     - nolintlint
@@ -78,6 +94,7 @@ linters:
     - goconst
     - godox
     - lll
+    - maintidx
     - mnd
     - nakedret
     - nestif

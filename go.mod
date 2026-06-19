@@ -1,6 +1,6 @@
 module github.com/twpayne/go-pinentry/v4
 
-go 1.24.0
+go 1.25.0
 
 tool github.com/golang/mock/mockgen
 
